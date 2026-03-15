@@ -11,27 +11,55 @@ export const ANALYSIS_SYSTEM_INSTRUCTION = `You are a product design analyst spe
 
 // ─── Analysis Prompt ─────────────────────────────────────────────────────────
 
-export const ANALYSIS_PROMPT = `Analyze this sticker image carefully and extract the following information. Return ONLY a pure JSON object (no markdown, no code blocks, no extra text).
+export const ANALYSIS_PROMPT = `Analyze this sticker image carefully and extract the following structured information. Return ONLY a pure JSON object (no markdown, no code blocks, no explanations).
 
-**Guidelines:**
-1. **niche**: Identify the market niche this sticker targets (e.g., "Funny Firefighter", "Pet Lovers", "Motivational Quotes", "sarcastic").
-2. **targetAudience**: Describe the ideal buyer demographic (e.g., "Gen-Z designers, urban fashion enthusiasts, digital artists, Corporate employee...").
-3. **style**: The primary visual style and emotional tone of the design (e.g., "Cyberpunk", "Kawaii", "Retro", "Minimalist", "Bold Typography", "edgy", "playful", "motivational", "nostalgic").
-4. **quote**: Extract any visible text or quote from the sticker. If no text is present, return an empty string.
-5. **imageDescription**: A detailed visual description prompt that could be used to recreate this sticker's aesthetic. Be specific about textures, gradients, shapes, lighting, and composition.
-6. **layoutDescription**: Describe the layout and composition, color and typography (e.g., "Circular badge style with central typography and surrounding orbit rings").
+Each field must contain only the information relevant to that category and must not repeat information across fields.
 
-**Output JSON Schema:**
+Guidelines:
+
+1. niche  
+Identify the market niche or theme of the sticker. This should describe the cultural or humor category the design belongs to.  
+Examples: "Dark Humor", "Mechanic Humor", "Pet Lovers", "Sarcastic Quotes", "Western Parody", "Cute Animal", "Office Humor", "Motivational Meme".
+
+2. targetAudience  
+Describe the primary group of people most likely to buy or use this sticker. Consider lifestyle, interests, internet culture, profession, or hobbies.  
+Examples: "Millennials and Gen-Z meme lovers", "mechanics and blue-collar workers", "cat owners and pet lovers", "office workers who enjoy sarcastic humor".
+
+3. visualStyle  
+Describe the overall visual language of the design. Include:
+- illustration style (cartoon, engraving, minimalist, kawaii, retro badge, vector, etc.)
+- line style (bold outlines, cross-hatching, clean vector)
+- overall color mood or palette (monochrome, pastel, retro warm tones, high contrast, etc.)
+- texture if present (distressed, vintage print, clean digital)
+
+Do NOT describe specific objects or layout here.
+
+4. quote  
+Extract the exact visible text that appears on the sticker. Preserve capitalization and wording as closely as possible.  
+If no text exists, return an empty string.
+
+5. layoutStructure  
+Describe only the visual composition and structure of the sticker. Include:
+- main subject or character
+- important objects or elements
+- placement of illustration and text (center, top arc, stacked lines, badge layout, etc.)
+- overall composition shape (circular badge, stacked text block, centered character, etc.)
+
+If specific elements have distinctive colors important to recognition (for example a green dumpster or orange flames), mention them here.
+
+Do NOT repeat the general color palette already described in visualStyle.
+
+Output JSON Schema:
+
 {
   "niche": "string",
   "targetAudience": "string",
-  "style": "string",
+  "visualStyle": "string",
   "quote": "string",
-  "imageDescription": "string",
-  "layoutDescription": "string"
+  "layoutStructure": "string"
 }
 
-Return ONLY the JSON object. Do not include any markdown formatting, code blocks, or explanatory text.`;
+Return ONLY the JSON object. Do not include markdown formatting, code blocks, or explanatory text.`;
 
 // ─── Generation System Prompt ────────────────────────────────────────────────
 
@@ -39,7 +67,7 @@ export const GENERATION_SYSTEM_PROMPT = `Bạn là một họa sĩ Sticker chuy�
 
 CRITICAL RULES:
 1. Tuyệt đối KHÔNG ĐƯỢC sao chép bố cục của ảnh gốc. Ảnh gốc chỉ là nguồn cảm hứng về chủ đề.
-2. Hãy sử dụng khả năng sáng tạo để đưa ra các phiên bản ĐỘC ĐÁO, bám sát imageDescription và layoutDescription.
+2. Hãy sử dụng khả năng sáng tạo để đưa ra các phiên bản ĐỘC ĐÁO, bám sát Visual Style và Layout Structure.
 3. Nếu mô tả bằng tiếng Việt, hãy hiểu ngữ cảnh văn hóa và dịch nội dung phù hợp cho thiết kế.
 4. Quote/text trên sticker phải giữ nguyên ngôn ngữ gốc của người dùng.
 

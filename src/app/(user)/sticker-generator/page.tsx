@@ -23,10 +23,10 @@ const DEFAULT_FORM_STATE: StickerFormState = {
   quote: "",
   extractedElements: [],
   imageDescription: "",
-  style: "",
-  layoutDescription: "",
+  visualStyle: "",
+  layoutStructure: "",
   selectedModel: "auto",
-  variations: 4,
+  variations: 2,
 };
 
 /**
@@ -47,14 +47,14 @@ function buildGenerationPrompt(state: StickerFormState): string {
   if (state.quote) {
     sections.push(`[TEXT ON STICKER] ${state.quote}`);
   }
-  if (state.style) {
-    sections.push(`[STYLE] ${state.style}`);
+  if (state.visualStyle) {
+    sections.push(`[VISUAL STYLE] ${state.visualStyle}`);
   }
   if (state.imageDescription) {
     sections.push(`[IMAGE DESCRIPTION] ${state.imageDescription}`);
   }
-  if (state.layoutDescription) {
-    sections.push(`[LAYOUT] ${state.layoutDescription}`);
+  if (state.layoutStructure) {
+    sections.push(`[LAYOUT STRUCTURE] ${state.layoutStructure}`);
   }
 
   return sections.join("\n");
@@ -134,10 +134,10 @@ export default function StickerGeneratorPage() {
           niche: analysis.niche || prev.niche,
           targetAudience: analysis.targetAudience || prev.targetAudience,
           quote: analysis.quote || prev.quote,
-          style: analysis.style || prev.style,
+          visualStyle: analysis.visualStyle || prev.visualStyle,
           imageDescription: analysis.imageDescription || prev.imageDescription,
-          layoutDescription:
-            analysis.layoutDescription || prev.layoutDescription,
+          layoutStructure:
+            analysis.layoutStructure || prev.layoutStructure,
         }));
 
         console.log("=== ANALYSIS COMPLETE ===", analysis);
@@ -164,18 +164,11 @@ export default function StickerGeneratorPage() {
     const prompt = buildGenerationPrompt(formState);
 
     try {
-      // Include reference image if available
-      let referenceImage: string | undefined;
-      if (uploadedFileRef.current) {
-        referenceImage = await fileToBase64(uploadedFileRef.current);
-      }
-
       const response = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           prompt,
-          referenceImage,
           variations: formState.variations,
           selectedModel: formState.selectedModel,
           quote: formState.quote,

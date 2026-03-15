@@ -20,6 +20,20 @@ export default function AnalyticsPanel({
   availableModels,
   suggestedModel,
 }: AnalyticsPanelProps) {
+  const [isCopied, setIsCopied] = React.useState(false);
+
+  const handleCopyAll = () => {
+    const analysisData = {
+      niche: formState.niche,
+      targetAudience: formState.targetAudience,
+      visualStyle: formState.visualStyle,
+      quote: formState.quote,
+      layoutStructure: formState.layoutStructure,
+    };
+    navigator.clipboard.writeText(JSON.stringify(analysisData, null, 2));
+    setIsCopied(true);
+    setTimeout(() => setIsCopied(false), 2000);
+  };
   const handleRemoveElement = (id: string) => {
     onFormChange({
       extractedElements: formState.extractedElements.filter(
@@ -56,145 +70,148 @@ export default function AnalyticsPanel({
 
   return (
     <section className="flex-1 overflow-y-auto p-8 bg-slate-50 no-scrollbar">
-      <div className="max-w-2xl mx-auto space-y-6">
+      <div className="max-w-3xl mx-auto space-y-6">
         {/* Section Header */}
-        <div className="flex items-center gap-2 mb-2">
-          <span className="material-symbols-outlined text-primary">
-            analytics
-          </span>
-          <h2 className="text-2xl font-bold text-slate-900">
-            Analysis Insights
-          </h2>
-        </div>
-
-        {/* Niche & Audience */}
-        <div className="bg-white p-5 rounded-xl border border-slate-300 shadow-sm">
-          <h3 className="text-sm font-bold text-slate-500 mb-3 flex items-center gap-2">
-            <span className="material-symbols-outlined text-sm">groups</span>
-            NICHE &amp; TARGET AUDIENCE
-          </h3>
-          <div className="space-y-2">
-            <input
-              className="w-full bg-transparent text-lg font-semibold text-slate-900 outline-none placeholder-slate-400"
-              value={formState.niche}
-              onChange={(e) => onFormChange({ niche: e.target.value })}
-              placeholder="e.g., Funny Firefighter, Pet Lovers, Motivational Quotes"
-            />
-            <input
-              className="w-full bg-transparent text-sm text-slate-700 outline-none placeholder-slate-400"
-              value={formState.targetAudience}
-              onChange={(e) => onFormChange({ targetAudience: e.target.value })}
-              placeholder="e.g., Gen-Z designers, urban fashion enthusiasts, Corporate employee"
-            />
-          </div>
-        </div>
-
-        {/* Extracted Text */}
-        <div className="bg-white p-5 rounded-xl border border-slate-300 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-bold text-slate-500 flex items-center gap-2">
-              <span className="material-symbols-outlined text-sm">
-                format_quote
-              </span>
-              EXTRACTED TEXT
-            </h3>
-            <button
-              onClick={() => navigator.clipboard.writeText(formState.quote)}
-              className="text-xs flex items-center gap-1 text-primary font-bold hover:opacity-80 transition-opacity"
-            >
-              <span className="material-symbols-outlined text-xs">
-                content_copy
-              </span>
-              Copy Text
-            </button>
-          </div>
-          <textarea
-            className="w-full bg-slate-50 border border-slate-300 rounded-lg p-3 text-sm text-slate-800 focus:ring-2 focus:ring-primary focus:border-primary resize-none h-20 outline-none placeholder-slate-400"
-            placeholder="Visible text or quote on the sticker..."
-            value={formState.quote}
-            onChange={(e) => onFormChange({ quote: e.target.value })}
-          />
-        </div>
-
-        {/* Visual Style & Tone */}
-        <div className="bg-white p-5 rounded-xl border border-slate-300 shadow-sm">
-          <h3 className="text-sm font-bold text-slate-500 mb-3 flex items-center gap-2">
-            <span className="material-symbols-outlined text-sm">lightbulb</span>
-            VISUAL STYLE &amp; TONE
-          </h3>
-          <input
-            className="w-full bg-slate-50 border border-slate-300 rounded-lg p-3 text-sm text-slate-800 focus:ring-2 focus:ring-primary focus:border-primary outline-none placeholder-slate-400"
-            value={formState.style}
-            onChange={(e) => onFormChange({ style: e.target.value })}
-            placeholder="e.g., Cyberpunk, Kawaii, edgy, playful, motivational"
-          />
-        </div>
-
-        {/* Extracted Elements */}
-        <div className="bg-white p-5 rounded-xl border border-slate-300 shadow-sm">
-          <h3 className="text-sm font-bold text-slate-500 mb-3 flex items-center gap-2">
-            <span className="material-symbols-outlined text-sm">category</span>
-            EXTRACTED ELEMENTS
-          </h3>
-          <div className="grid grid-cols-4 gap-3 mb-4">
-            {formState.extractedElements.map((el) => (
-              <div
-                key={el.id}
-                className="aspect-square relative rounded-lg overflow-hidden border border-slate-300 group"
-              >
-                <img
-                  alt={el.label || "Element"}
-                  className="w-full h-full object-cover"
-                  src={el.imageUrl}
-                />
-                <button
-                  onClick={() => handleRemoveElement(el.id)}
-                  className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-0.5 hover:bg-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                  <span className="material-symbols-outlined text-xs">
-                    close
-                  </span>
-                </button>
-              </div>
-            ))}
-            <button
-              onClick={handleAddElement}
-              className="aspect-square rounded-lg border-2 border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-500 hover:text-primary hover:border-primary transition-colors"
-            >
-              <span className="material-symbols-outlined">add</span>
-              <span className="text-[10px] mt-1 font-bold uppercase">Add</span>
-            </button>
-          </div>
-
-          <p className="text-xs font-bold text-slate-500 mb-2 uppercase">
-            Image Description Prompt
-          </p>
-          <textarea
-            className="w-full bg-slate-50 border border-slate-300 rounded-lg p-3 text-sm text-slate-800 focus:ring-2 focus:ring-primary focus:border-primary resize-none h-24 outline-none placeholder-slate-400"
-            placeholder="Detailed prompt for the sticker's visual style, textures, gradients, shapes..."
-            value={formState.imageDescription}
-            onChange={(e) =>
-              onFormChange({ imageDescription: e.target.value })
-            }
-          />
-        </div>
-
-        {/* Layout & Composition */}
-        <div className="bg-white p-5 rounded-xl border border-slate-300 shadow-sm">
-          <h3 className="text-sm font-bold text-slate-500 mb-3 flex items-center gap-2">
-            <span className="material-symbols-outlined text-sm">
-              dashboard_customize
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-primary">
+              analytics
             </span>
-            LAYOUT &amp; COMPOSITION
-          </h3>
-          <textarea
-            className="w-full bg-slate-50 border border-slate-300 rounded-lg p-3 text-sm text-slate-800 focus:ring-2 focus:ring-primary focus:border-primary resize-none h-20 outline-none placeholder-slate-400"
-            placeholder="Layout, composition, color and typography description..."
-            value={formState.layoutDescription}
-            onChange={(e) =>
-              onFormChange({ layoutDescription: e.target.value })
-            }
-          />
+            <h2 className="text-2xl font-bold text-slate-900">
+              Analysis Insights
+            </h2>
+          </div>
+          <button
+            onClick={handleCopyAll}
+            className="flex items-center gap-2 px-3 py-1.5 text-sm font-semibold transition-colors rounded-lg border border-slate-200 hover:border-primary hover:text-primary bg-white shadow-sm text-slate-600"
+            title="Copy all visible insights as JSON"
+          >
+            <span className="material-symbols-outlined text-[18px]">
+              {isCopied ? "check" : "content_copy"}
+            </span>
+            {isCopied ? "Copied!" : "Copy All"}
+          </button>
+        </div>
+
+        {/* --- Unified Analysis Table --- */}
+        <div className="bg-white rounded-xl border border-slate-300 shadow-sm overflow-hidden">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-50 border-b border-slate-200">
+                <th className="py-3 px-4 font-bold text-xs text-slate-500 uppercase w-1/4">Property</th>
+                <th className="py-3 px-4 font-bold text-xs text-slate-500 uppercase w-3/4">Value (Editable)</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-200">
+              
+              {/* Niche */}
+              <tr className="hover:bg-slate-50/50 transition-colors">
+                <td className="py-4 px-4 align-top border-r border-slate-100">
+                  <div className="flex items-center gap-2 font-bold text-sm text-slate-700">
+                    <span className="material-symbols-outlined text-[16px] text-slate-400">category</span>
+                    Niche
+                  </div>
+                  <p className="text-[10px] text-slate-400 mt-1 leading-tight">Market category or theme.</p>
+                </td>
+                <td className="py-0 px-0 align-top">
+                  <textarea
+                    className="w-full h-full min-h-[60px] p-4 bg-transparent border-none text-sm text-slate-800 focus:ring-2 focus:ring-inset focus:ring-primary outline-none resize-none placeholder-slate-400 leading-relaxed"
+                    value={formState.niche}
+                    onChange={(e) => onFormChange({ niche: e.target.value })}
+                    placeholder='e.g., "Dark Humor", "Pet Lovers"'
+                  />
+                </td>
+              </tr>
+
+              {/* Target Audience */}
+              <tr className="hover:bg-slate-50/50 transition-colors">
+                <td className="py-4 px-4 align-top border-r border-slate-100">
+                  <div className="flex items-center gap-2 font-bold text-sm text-slate-700">
+                    <span className="material-symbols-outlined text-[16px] text-slate-400">groups</span>
+                    Target Audience
+                  </div>
+                  <p className="text-[10px] text-slate-400 mt-1 leading-tight">Primary buyer demographic.</p>
+                </td>
+                <td className="py-0 px-0 align-top">
+                  <textarea
+                    className="w-full h-full min-h-[60px] p-4 bg-transparent border-none text-sm text-slate-800 focus:ring-2 focus:ring-inset focus:ring-primary outline-none resize-none placeholder-slate-400 leading-relaxed"
+                    value={formState.targetAudience}
+                    onChange={(e) => onFormChange({ targetAudience: e.target.value })}
+                    placeholder='e.g., "Millennials and Gen-Z meme lovers"'
+                  />
+                </td>
+              </tr>
+
+              {/* Visual Style */}
+              <tr className="hover:bg-slate-50/50 transition-colors">
+                <td className="py-4 px-4 align-top border-r border-slate-100">
+                  <div className="flex items-center gap-2 font-bold text-sm text-slate-700">
+                    <span className="material-symbols-outlined text-[16px] text-slate-400">palette</span>
+                    Visual Style
+                  </div>
+                  <p className="text-[10px] text-slate-400 mt-1 leading-tight">Style, colors & mood.</p>
+                </td>
+                <td className="py-0 px-0 align-top">
+                  <textarea
+                    className="w-full h-full min-h-[80px] p-4 bg-transparent border-none text-sm text-slate-800 focus:ring-2 focus:ring-inset focus:ring-primary outline-none resize-none placeholder-slate-400 leading-relaxed"
+                    value={formState.visualStyle}
+                    onChange={(e) => onFormChange({ visualStyle: e.target.value })}
+                    placeholder='e.g., "Retro badge, bold outlines, warm tones"'
+                  />
+                </td>
+              </tr>
+
+              {/* Quote */}
+              <tr className="hover:bg-slate-50/50 transition-colors">
+                <td className="py-4 px-4 align-top border-r border-slate-100 relative">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 font-bold text-sm text-slate-700">
+                      <span className="material-symbols-outlined text-[16px] text-slate-400">format_quote</span>
+                      Quote
+                    </div>
+                    {formState.quote && (
+                      <button 
+                        onClick={() => navigator.clipboard.writeText(formState.quote)}
+                        className="text-primary hover:bg-primary/10 p-1 rounded transition-colors"
+                        title="Copy text"
+                      >
+                        <span className="material-symbols-outlined text-[14px]">content_copy</span>
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-slate-400 mt-1 leading-tight">Visible text or quote.</p>
+                </td>
+                <td className="py-0 px-0 align-top">
+                  <textarea
+                    className="w-full h-full min-h-[60px] p-4 bg-transparent border-none text-sm font-medium text-slate-900 focus:ring-2 focus:ring-inset focus:ring-primary outline-none resize-none placeholder-slate-400 leading-relaxed"
+                    value={formState.quote}
+                    onChange={(e) => onFormChange({ quote: e.target.value })}
+                    placeholder='Exact text on sticker (if any)'
+                  />
+                </td>
+              </tr>
+
+              {/* Layout Structure */}
+              <tr className="hover:bg-slate-50/50 transition-colors">
+                <td className="py-4 px-4 align-top border-r border-slate-100">
+                  <div className="flex items-center gap-2 font-bold text-sm text-slate-700">
+                    <span className="material-symbols-outlined text-[16px] text-slate-400">dashboard_customize</span>
+                    Layout Structure
+                  </div>
+                  <p className="text-[10px] text-slate-400 mt-1 leading-tight">Composition & element placement.</p>
+                </td>
+                <td className="py-0 px-0 align-top">
+                  <textarea
+                    className="w-full h-full min-h-[80px] p-4 bg-transparent border-none text-sm text-slate-800 focus:ring-2 focus:ring-inset focus:ring-primary outline-none resize-none placeholder-slate-400 leading-relaxed"
+                    value={formState.layoutStructure}
+                    onChange={(e) => onFormChange({ layoutStructure: e.target.value })}
+                    placeholder='e.g., "Circular badge style with central typography"'
+                  />
+                </td>
+              </tr>
+
+            </tbody>
+          </table>
         </div>
 
         {/* Generation Controls */}

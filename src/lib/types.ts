@@ -38,7 +38,7 @@ export interface StickerAnalysis {
   targetAudience: string;
 
   /** Visual style and emotional tone (e.g., "Cyberpunk", "Kawaii", "edgy", "playful") */
-  style: string;
+  visualStyle: string;
 
   /** Text or quote to be displayed on the sticker */
   quote: string;
@@ -50,7 +50,7 @@ export interface StickerAnalysis {
   imageDescription: string;
 
   /** Layout, composition, color and typography description */
-  layoutDescription: string;
+  layoutStructure: string;
 
   /** Optional reference image URL that inspired the design */
   referenceImageUrl?: string;
@@ -82,10 +82,10 @@ export interface StickerFormState {
   imageDescription: string;
 
   /** Visual style and emotional tone */
-  style: string;
+  visualStyle: string;
 
   /** Layout, composition, color and typography description */
-  layoutDescription: string;
+  layoutStructure: string;
 
   /** Selected AI model for generation ("auto" = AI recommended) */
   selectedModel: ModelId | "auto";

@@ -68,11 +68,11 @@ export const geminiProvider: AIProvider = {
     return {
       niche: analysis.niche || "",
       targetAudience: analysis.targetAudience || "",
-      style: analysis.style || "",
+      visualStyle: analysis.visualStyle || "",
       quote: analysis.quote || "",
       extractedElements: [],
       imageDescription: analysis.imageDescription || "",
-      layoutDescription: analysis.layoutDescription || "",
+      layoutStructure: analysis.layoutStructure || "",
     };
   },
 
@@ -92,48 +92,55 @@ export const geminiProvider: AIProvider = {
 
       const images: string[] = [];
 
-      for (let i = 0; i < request.variations; i++) {
-        // Build prompt: prioritize text description over reference image
-        // The prompt instructs the model to treat the image as LOW-WEIGHT inspiration only
-        const textPrompt = [
-          request.prompt,
-          "",
-          "[IMPORTANT] The reference image below is ONLY for thematic inspiration.",
-          "DO NOT replicate its layout, composition, or pose.",
-          "Create an ENTIRELY NEW design based on the text descriptions above.",
-          `This is variation ${i + 1} of ${request.variations} — make each variation visually distinct.`,
-        ].join("\n");
+      // Create an array of generation promises to run concurrently
+      const generatePromises = Array.from(
+        { length: request.variations },
+        async (_, i) => {
+          // Build prompt: prioritize text description over reference image
+          // The prompt instructs the model to treat the image as LOW-WEIGHT inspiration only
+          const textPrompt = [
+            request.prompt,
+            "",
+            "[IMPORTANT] The reference image below is ONLY for thematic inspiration.",
+            "DO NOT replicate its layout, composition, or pose.",
+            "Create an ENTIRELY NEW design based on the text descriptions above.",
+            `This is variation ${i + 1} of ${request.variations} — make each variation visually distinct.`,
+          ].join("\n");
 
-        const parts: (string | { inlineData: { mimeType: string; data: string } })[] = [
-          textPrompt,
-        ];
+          const parts: (
+            | string
+            | { inlineData: { mimeType: string; data: string } }
+          )[] = [textPrompt];
 
-        // Attach reference image as LOW-WEIGHT inspiration only
-        if (request.referenceImage) {
-          parts.push({
-            inlineData: {
-              mimeType: "image/png",
-              data: request.referenceImage,
-            },
-          });
-        }
 
-        const result = await model.generateContent(parts);
-        const response = result.response;
 
-        // Extract inline image data from the response
-        const candidates = response.candidates;
-        if (candidates && candidates.length > 0) {
-          const responseParts = candidates[0].content?.parts;
-          if (responseParts) {
-            for (const part of responseParts) {
-              if (part.inlineData?.data) {
-                images.push(
-                  `data:${part.inlineData.mimeType || "image/png"};base64,${part.inlineData.data}`
-                );
+          const result = await model.generateContent(parts);
+          const response = result.response;
+
+          // Extract inline image data from the response
+          const candidates = response.candidates;
+          if (candidates && candidates.length > 0) {
+            const responseParts = candidates[0].content?.parts;
+            if (responseParts) {
+              for (const part of responseParts) {
+                if (part.inlineData?.data) {
+                  return `data:${part.inlineData.mimeType || "image/png"};base64,${part.inlineData.data}`;
+                }
               }
             }
           }
+          throw new Error("No image data found in candidate response");
+        }
+      );
+
+      // Execute all promises concurrently and filter out any that failed
+      const results = await Promise.allSettled(generatePromises);
+      
+      for (const result of results) {
+        if (result.status === "fulfilled" && result.value) {
+          images.push(result.value);
+        } else if (result.status === "rejected") {
+          console.error("A generation variation failed:", result.reason);
         }
       }
 
