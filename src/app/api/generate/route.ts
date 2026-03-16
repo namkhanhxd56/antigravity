@@ -39,21 +39,23 @@ export async function POST(request: NextRequest) {
       modelId = selectedModel as ModelId;
     }
 
-    // Check availability
-    const models = getAvailableModels();
-    const chosen = models.find((m) => m.id === modelId);
-    if (chosen && !chosen.available) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: `${chosen.name} is not available. Please set ${chosen.envKey} in .env.local.`,
-        },
-        { status: 400 }
-      );
-    }
-
-    // Extract API Key
+    // Extract API Key from client early
     const apiKey = request.headers.get("x-gemini-api-key") || undefined;
+
+    // Check availability only if no client API key was provided
+    if (!apiKey) {
+      const models = getAvailableModels();
+      const chosen = models.find((m) => m.id === modelId);
+      if (chosen && !chosen.available) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: `${chosen.name} is not available. Please set ${chosen.envKey} in .env.local, or enter your key in the top nav Settings.`,
+          },
+          { status: 400 }
+        );
+      }
+    }
 
     // Route to provider
     const result = await routeGeneration(
