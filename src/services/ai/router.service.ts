@@ -63,8 +63,11 @@ export function getAvailableModels(): ModelConfig[] {
  * Returns an error response if not, preventing 404/crash.
  */
 function guardApiKey(
-  modelId: ModelId
+  modelId: ModelId,
+  clientApiKey?: string
 ): StickerGenerationResponse | null {
+  if (clientApiKey) return null; // Guard passed if user provided key
+
   const models = getAvailableModels();
   const model = models.find((m) => m.id === modelId);
 
@@ -134,17 +137,18 @@ export function suggestModel(
  */
 export async function routeGeneration(
   request: StickerGenerationRequest,
-  modelId: ModelId
+  modelId: ModelId,
+  apiKey?: string
 ): Promise<StickerGenerationResponse> {
   // ── API Guard: check key before calling any provider ──
-  const guardResult = guardApiKey(modelId);
+  const guardResult = guardApiKey(modelId, apiKey);
   if (guardResult) {
     return guardResult;
   }
 
   switch (modelId) {
     case "gemini-flash-image":
-      return geminiProvider.generateSticker(request);
+      return geminiProvider.generateSticker(request, apiKey);
 
     case "ideogram-2":
       return {

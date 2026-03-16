@@ -27,7 +27,8 @@ export interface AIProvider {
    */
   analyzeSticker(
     imageBase64: string,
-    mimeType?: string
+    mimeType?: string,
+    apiKey?: string
   ): Promise<StickerAnalysis>;
 
   /**
@@ -37,6 +38,7 @@ export interface AIProvider {
    * @returns The generated sticker image(s) and metadata
    */
   generateSticker(
-    request: StickerGenerationRequest
+    request: StickerGenerationRequest,
+    apiKey?: string
   ): Promise<StickerGenerationResponse>;
 }

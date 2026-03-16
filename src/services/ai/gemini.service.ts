@@ -20,11 +20,11 @@ import type {
 
 // ─── Client ──────────────────────────────────────────────────────────────────
 
-function getGeminiClient() {
-  const apiKey = process.env.GEMINI_API_KEY;
+function getGeminiClient(clientKey?: string) {
+  const apiKey = clientKey || process.env.GEMINI_API_KEY;
   if (!apiKey) {
     throw new Error(
-      "GEMINI_API_KEY environment variable is not set. Please add it to your .env.local file."
+      "GEMINI_API_KEY environment variable is not set. Please add it to your Settings or .env.local file."
     );
   }
   return new GoogleGenerativeAI(apiKey);
@@ -37,9 +37,10 @@ export const geminiProvider: AIProvider = {
 
   async analyzeSticker(
     imageBase64: string,
-    mimeType: string = "image/png"
+    mimeType: string = "image/png",
+    apiKey?: string
   ): Promise<StickerAnalysis> {
-    const genAI = getGeminiClient();
+    const genAI = getGeminiClient(apiKey);
     const model = genAI.getGenerativeModel({
       model: "gemini-2.5-flash",
       systemInstruction: ANALYSIS_SYSTEM_INSTRUCTION,
@@ -66,21 +67,22 @@ export const geminiProvider: AIProvider = {
     const analysis: StickerAnalysis = JSON.parse(cleanedJson);
 
     return {
-      niche: analysis.niche || "",
-      targetAudience: analysis.targetAudience || "",
-      visualStyle: analysis.visualStyle || "",
-      quote: analysis.quote || "",
+      niche: analysis.niche ?? "",
+      targetAudience: analysis.targetAudience ?? "",
+      visualStyle: analysis.visualStyle ?? "",
+      quote: analysis.quote ?? "",
       extractedElements: [],
-      imageDescription: analysis.imageDescription || "",
-      layoutStructure: analysis.layoutStructure || "",
+      imageDescription: analysis.imageDescription ?? "",
+      layoutStructure: analysis.layoutStructure ?? "",
     };
   },
 
   async generateSticker(
-    request: StickerGenerationRequest
+    request: StickerGenerationRequest,
+    apiKey?: string
   ): Promise<StickerGenerationResponse> {
     try {
-      const genAI = getGeminiClient();
+      const genAI = getGeminiClient(apiKey);
       const model = genAI.getGenerativeModel({
         model: "gemini-3.1-flash-image-preview",
         systemInstruction: GENERATION_SYSTEM_PROMPT,
@@ -135,7 +137,7 @@ export const geminiProvider: AIProvider = {
 
       // Execute all promises concurrently and filter out any that failed
       const results = await Promise.allSettled(generatePromises);
-      
+
       for (const result of results) {
         if (result.status === "fulfilled" && result.value) {
           images.push(result.value);

@@ -52,10 +52,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Extract API Key
+    const apiKey = request.headers.get("x-gemini-api-key") || undefined;
+
     // Route to provider
     const result = await routeGeneration(
       { prompt, referenceImage, variations },
-      modelId
+      modelId,
+      apiKey
     );
 
     return NextResponse.json({

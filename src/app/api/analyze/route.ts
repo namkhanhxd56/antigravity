@@ -20,9 +20,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const apiKey = request.headers.get("x-gemini-api-key") || undefined;
+
     const analysis = await analyzeSticker(
       imageBase64,
-      mimeType || "image/png"
+      mimeType || "image/png",
+      apiKey
     );
 
     return NextResponse.json({ success: true, analysis });

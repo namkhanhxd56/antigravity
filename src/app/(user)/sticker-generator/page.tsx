@@ -7,6 +7,7 @@ import AnalyticsPanel from "@/components/sticker/AnalyticsPanel";
 import ResultGrid from "@/components/sticker/ResultGrid";
 import { STICKER_MASTER_RULES } from "@/lib/rules";
 import { fileToBase64 } from "@/lib/utils";
+import { getStoredApiKey } from "@/lib/client-key-storage";
 import type {
   StickerFormState,
   StickerResult,
@@ -118,9 +119,13 @@ export default function StickerGeneratorPage() {
       const base64 = await fileToBase64(file);
       const mimeType = file.type || "image/png";
 
+      const apiKey = getStoredApiKey() || "";
       const response = await fetch("/api/analyze", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-gemini-api-key": apiKey,
+        },
         body: JSON.stringify({ imageBase64: base64, mimeType }),
       });
 
@@ -131,13 +136,12 @@ export default function StickerGeneratorPage() {
 
         setFormState((prev) => ({
           ...prev,
-          niche: analysis.niche || prev.niche,
-          targetAudience: analysis.targetAudience || prev.targetAudience,
-          quote: analysis.quote || prev.quote,
-          visualStyle: analysis.visualStyle || prev.visualStyle,
-          imageDescription: analysis.imageDescription || prev.imageDescription,
-          layoutStructure:
-            analysis.layoutStructure || prev.layoutStructure,
+          niche: analysis.niche ?? "",
+          targetAudience: analysis.targetAudience ?? "",
+          quote: analysis.quote ?? "",
+          visualStyle: analysis.visualStyle ?? "",
+          imageDescription: analysis.imageDescription ?? "",
+          layoutStructure: analysis.layoutStructure ?? "",
         }));
 
         console.log("=== ANALYSIS COMPLETE ===", analysis);
@@ -164,9 +168,13 @@ export default function StickerGeneratorPage() {
     const prompt = buildGenerationPrompt(formState);
 
     try {
+      const apiKey = getStoredApiKey() || "";
       const response = await fetch("/api/generate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-gemini-api-key": apiKey,
+        },
         body: JSON.stringify({
           prompt,
           variations: formState.variations,
