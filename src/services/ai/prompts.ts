@@ -44,6 +44,7 @@ Describe only the visual composition and structure of the sticker. Include:
 - important objects or elements
 - placement of illustration and text (center, top arc, stacked lines, badge layout, etc.)
 - overall composition shape (circular badge, stacked text block, centered character, etc.)
+- font style
 
 If specific elements have distinctive colors important to recognition (for example a green dumpster or orange flames), mention them here.
 
