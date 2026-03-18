@@ -10,6 +10,8 @@ interface AnalyticsPanelProps {
   isGenerating: boolean;
   availableModels: ModelConfig[];
   suggestedModel?: ModelId;
+  onRefine: (modifications: string) => Promise<void>;
+  isRefining: boolean;
 }
 
 export default function AnalyticsPanel({
@@ -19,8 +21,17 @@ export default function AnalyticsPanel({
   isGenerating,
   availableModels,
   suggestedModel,
+  onRefine,
+  isRefining,
 }: AnalyticsPanelProps) {
   const [isCopied, setIsCopied] = React.useState(false);
+  const [modifications, setModifications] = React.useState("");
+
+  const handleRefineSubmit = async () => {
+    if (!modifications.trim()) return;
+    await onRefine(modifications);
+    setModifications(""); // clear after success
+  };
 
   const handleCopyAll = () => {
     const analysisData = {
@@ -91,6 +102,55 @@ export default function AnalyticsPanel({
             </span>
             {isCopied ? "Copied!" : "Copy All"}
           </button>
+        </div>
+
+        {/* --- Smart Modifications --- */}
+        <div className="bg-white rounded-xl border border-primary/30 shadow-sm p-4 flex flex-col gap-3 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 blur-3xl rounded-full pointer-events-none" />
+          
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-primary text-[20px]">magic_button</span>
+            <label className="font-bold text-sm text-slate-800">
+              Smart Modifications
+            </label>
+            <span className="text-xs text-slate-500 font-medium bg-slate-100 px-2 py-0.5 rounded-full ml-auto">
+              AI Powered
+            </span>
+          </div>
+          
+          <div className="flex gap-3">
+            <textarea
+              className="flex-1 bg-slate-50 border border-slate-200 rounded-lg p-3 text-sm text-slate-800 focus:ring-2 focus:ring-primary/50 outline-none resize-none placeholder-slate-400"
+              placeholder='e.g., "Make the visual style vintage retro", "Change the quote to Hello World"'
+              rows={2}
+              value={modifications}
+              onChange={(e) => setModifications(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  handleRefineSubmit();
+                }
+              }}
+              disabled={isRefining}
+            />
+            <button
+              onClick={handleRefineSubmit}
+              disabled={isRefining || !modifications.trim()}
+              className="bg-primary hover:bg-primary/95 text-white font-bold rounded-lg px-6 flex items-center justify-center transition-all disabled:opacity-50 disabled:cursor-not-allowed min-w-[120px]"
+            >
+              {isRefining ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <span>Applying</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5">
+                  <span>Apply</span>
+                  <span className="material-symbols-outlined text-[18px]">send</span>
+                </div>
+              )}
+            </button>
+          </div>
         </div>
 
         {/* --- Unified Analysis Table --- */}

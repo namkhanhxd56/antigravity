@@ -32,6 +32,15 @@ export interface AIProvider {
   ): Promise<StickerAnalysis>;
 
   /**
+   * Refines an existing sticker analysis based on user text modifications.
+   */
+  refineAnalysis(
+    currentState: StickerAnalysis,
+    modifications: string,
+    apiKey?: string
+  ): Promise<StickerAnalysis>;
+
+  /**
    * Generates a sticker design based on the given prompt and parameters.
    *
    * @param request - The generation parameters including prompt and variations

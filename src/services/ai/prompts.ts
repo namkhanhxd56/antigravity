@@ -78,3 +78,25 @@ MANDATORY FORMAT:
 - All elements connected into one solid piece
 - High-contrast vector style with clear typography
 - Die-cut shape following the design outline`;
+
+// ─── Refine Analysis Prompt ──────────────────────────────────────────────────
+
+export const REFINE_ANALYSIS_PROMPT = `You are an expert sticker design AI.
+You will be given the CURRENT sticker analysis in JSON format, followed by the USER'S desired modifications as text.
+Your task is to smartly parse the user's modifications and update the relevant fields of the JSON.
+
+Rules:
+1. ONLY update fields logically affected by the user's request. Leave other fields largely unchanged.
+   - Example: If user says "make it vintage", update 'visualStyle' and possibly 'niche'. Do NOT change 'quote' or 'layoutStructure' if they weren't mentioned.
+   - Example: If user says "change text to Hello World", update ONLY 'quote'.
+2. Return ONLY a pure JSON object matching the input schema (no markdown formatting, no code blocks).
+3. Do not invent new fields. The output JSON must strictly follow this structure:
+
+{
+  "niche": "string",
+  "targetAudience": "string",
+  "visualStyle": "string",
+  "quote": "string",
+  "layoutStructure": "string"
+}
+`;

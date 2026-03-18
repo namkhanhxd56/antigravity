@@ -10,6 +10,7 @@ import {
   ANALYSIS_SYSTEM_INSTRUCTION,
   ANALYSIS_PROMPT,
   GENERATION_SYSTEM_PROMPT,
+  REFINE_ANALYSIS_PROMPT,
 } from "./prompts";
 import type { AIProvider } from "./provider";
 import type {
@@ -75,6 +76,50 @@ export const geminiProvider: AIProvider = {
       imageDescription: analysis.imageDescription ?? "",
       layoutStructure: analysis.layoutStructure ?? "",
     };
+  },
+
+  async refineAnalysis(
+    currentState: StickerAnalysis,
+    modifications: string,
+    apiKey?: string
+  ): Promise<StickerAnalysis> {
+    const genAI = getGeminiClient(apiKey);
+    const model = genAI.getGenerativeModel({
+      model: "gemini-2.5-flash",
+      systemInstruction: REFINE_ANALYSIS_PROMPT,
+      generationConfig: {
+        temperature: 0.1, // low temp for precision
+        responseMimeType: "application/json",
+      },
+    });
+
+    try {
+      const prompt = `CURRENT STATE:\n${JSON.stringify(currentState, null, 2)}\n\nUSER MODIFICATIONS:\n${modifications}`;
+      
+      const result = await model.generateContent([prompt]);
+      const textResponse = result.response.text();
+
+      // Ensure clean JSON string
+      const cleanJson = textResponse
+        .replace(/```json/g, "")
+        .replace(/```/g, "")
+        .trim();
+
+      const analysis: StickerAnalysis = JSON.parse(cleanJson);
+      
+      return {
+        niche: analysis.niche ?? "",
+        targetAudience: analysis.targetAudience ?? "",
+        visualStyle: analysis.visualStyle ?? "",
+        quote: analysis.quote ?? "",
+        extractedElements: currentState.extractedElements || [],
+        imageDescription: analysis.imageDescription ?? "",
+        layoutStructure: analysis.layoutStructure ?? "",
+      };
+    } catch (error) {
+      console.error("Gemini refine analysis error:", error);
+      throw new Error("Failed to refine analysis or invalid JSON returned.");
+    }
   },
 
   async generateSticker(

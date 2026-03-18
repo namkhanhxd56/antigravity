@@ -67,6 +67,7 @@ export default function StickerGeneratorPage() {
   const [results, setResults] = useState<StickerResult[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isRefining, setIsRefining] = useState(false);
   const [availableModels, setAvailableModels] = useState<ModelConfig[]>([]);
   const [suggestedModel, setSuggestedModel] = useState<ModelId | undefined>();
 
@@ -158,6 +159,49 @@ export default function StickerGeneratorPage() {
       setIsAnalyzing(false);
     }
   }, []);
+
+  const handleRefine = useCallback(async (modifications: string) => {
+    setIsRefining(true);
+
+    try {
+      const apiKey = getStoredApiKey() || "";
+      const response = await fetch("/api/refine", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-gemini-api-key": apiKey,
+        },
+        body: JSON.stringify({
+          currentState: formState,
+          modifications,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.analysis) {
+        const analysis: StickerAnalysis = data.analysis;
+
+        setFormState((prev) => ({
+          ...prev,
+          niche: analysis.niche ?? prev.niche,
+          targetAudience: analysis.targetAudience ?? prev.targetAudience,
+          quote: analysis.quote ?? prev.quote,
+          visualStyle: analysis.visualStyle ?? prev.visualStyle,
+          imageDescription: analysis.imageDescription ?? prev.imageDescription,
+          layoutStructure: analysis.layoutStructure ?? prev.layoutStructure,
+        }));
+      } else {
+        console.error("Refine failed:", data.error);
+        alert(`Failed to apply modifications: ${data.error}`);
+      }
+    } catch (error) {
+      console.error("Refine request error:", error);
+      alert("Failed to connect to refine service. Check your API key.");
+    } finally {
+      setIsRefining(false);
+    }
+  }, [formState]);
 
   // --- Generation ---
 
@@ -271,6 +315,8 @@ export default function StickerGeneratorPage() {
           isGenerating={isGenerating}
           availableModels={availableModels}
           suggestedModel={suggestedModel}
+          onRefine={handleRefine}
+          isRefining={isRefining}
         />
         <ResultGrid
           results={results}
