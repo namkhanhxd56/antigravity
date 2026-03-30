@@ -6,7 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { analyzeSticker } from "@/services/ai/gemini.service";
+import { analyzeSticker } from "../../services/gemini.service";
 
 export async function POST(request: NextRequest) {
   try {

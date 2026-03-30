@@ -10,7 +10,7 @@ export default function TopNav() {
     // Load existing key from localStorage when the component mounts
     const savedKey = getStoredApiKey();
     if (savedKey) {
-      setApiKeyInput(savedKey);
+      setTimeout(() => setApiKeyInput(savedKey), 0);
     }
   }, []);
 

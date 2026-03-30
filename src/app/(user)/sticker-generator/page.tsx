@@ -2,10 +2,10 @@
 
 import { useState, useCallback, useRef, useEffect } from "react";
 import TopNav from "@/components/shared/TopNav";
-import SourceSidebar from "@/components/sticker/SourceSidebar";
-import AnalyticsPanel from "@/components/sticker/AnalyticsPanel";
-import ResultGrid from "@/components/sticker/ResultGrid";
-import { STICKER_MASTER_RULES } from "@/lib/rules";
+import SourceSidebar from "./components/SourceSidebar";
+import AnalyticsPanel from "./components/AnalyticsPanel";
+import ResultGrid from "./components/ResultGrid";
+import { STICKER_MASTER_RULES } from "./lib/rules";
 import { fileToBase64 } from "@/lib/utils";
 import { getStoredApiKey } from "@/lib/client-key-storage";
 import type {
@@ -14,7 +14,7 @@ import type {
   StickerAnalysis,
   ModelConfig,
   ModelId,
-} from "@/lib/types";
+} from "./lib/types";
 
 /** Default form state values. */
 const DEFAULT_FORM_STATE: StickerFormState = {
@@ -75,7 +75,7 @@ export default function StickerGeneratorPage() {
 
   // Fetch available models on mount
   useEffect(() => {
-    fetch("/api/generate")
+    fetch("/sticker-generator/api/generate")
       .then((res) => res.json())
       .then((data) => {
         if (data.models) {
@@ -121,7 +121,7 @@ export default function StickerGeneratorPage() {
       const mimeType = file.type || "image/png";
 
       const apiKey = getStoredApiKey() || "";
-      const response = await fetch("/api/analyze", {
+      const response = await fetch("/sticker-generator/api/analyze", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -165,7 +165,7 @@ export default function StickerGeneratorPage() {
 
     try {
       const apiKey = getStoredApiKey() || "";
-      const response = await fetch("/api/refine", {
+      const response = await fetch("/sticker-generator/api/refine", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -213,7 +213,7 @@ export default function StickerGeneratorPage() {
 
     try {
       const apiKey = getStoredApiKey() || "";
-      const response = await fetch("/api/generate", {
+      const response = await fetch("/sticker-generator/api/generate", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

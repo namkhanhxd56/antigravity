@@ -12,7 +12,7 @@ import type {
   StickerAnalysis,
   StickerGenerationRequest,
   StickerGenerationResponse,
-} from "@/lib/types";
+} from "../lib/types";
 
 export interface AIProvider {
   /** Human-readable name of the provider (e.g., "Gemini", "OpenAI") */

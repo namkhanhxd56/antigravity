@@ -17,7 +17,7 @@ import type {
   StickerAnalysis,
   StickerGenerationRequest,
   StickerGenerationResponse,
-} from "@/lib/types";
+} from "../lib/types";
 
 // ─── Client ──────────────────────────────────────────────────────────────────
 

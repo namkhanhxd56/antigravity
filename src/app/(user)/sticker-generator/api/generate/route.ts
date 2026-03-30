@@ -10,8 +10,8 @@ import {
   getAvailableModels,
   suggestModel,
   routeGeneration,
-} from "@/services/ai/router.service";
-import type { ModelId } from "@/lib/types";
+} from "../../services/router.service";
+import type { ModelId } from "../../lib/types";
 
 export async function POST(request: NextRequest) {
   try {

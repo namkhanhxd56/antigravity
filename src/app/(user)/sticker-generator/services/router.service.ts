@@ -15,7 +15,7 @@ import type {
   StickerFormState,
   StickerGenerationRequest,
   StickerGenerationResponse,
-} from "@/lib/types";
+} from "../lib/types";
 import { resolveApiKey, type ProviderKey } from "@/lib/key-storage";
 import { geminiProvider } from "./gemini.service";
 

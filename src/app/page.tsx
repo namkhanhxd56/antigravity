@@ -37,6 +37,18 @@ const modules = [
       "from-amber-50 to-orange-50 dark:from-amber-950/40 dark:to-orange-950/40",
     borderColor: "border-amber-200 dark:border-amber-800",
   },
+  {
+    title: "AMZ Content Curator",
+    description:
+      "Craft high-converting Amazon product listings with AI-optimized titles, bullets, and descriptions.",
+    href: "/content-curator",
+    emoji: "📝",
+    status: "Active" as const,
+    gradient: "from-orange-500 to-rose-500",
+    bgGradient:
+      "from-orange-50 to-rose-50 dark:from-orange-950/40 dark:to-rose-950/40",
+    borderColor: "border-orange-200 dark:border-orange-800",
+  },
 ];
 
 export default function Home() {

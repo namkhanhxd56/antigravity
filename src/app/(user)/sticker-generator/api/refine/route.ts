@@ -6,8 +6,8 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { geminiProvider } from "@/services/ai/gemini.service";
-import type { StickerAnalysis } from "@/lib/types";
+import { geminiProvider } from "../../services/gemini.service";
+import type { StickerAnalysis } from "../../lib/types";
 
 export async function POST(request: NextRequest) {
   try {

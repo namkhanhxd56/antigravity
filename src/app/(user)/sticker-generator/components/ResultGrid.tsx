@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useCallback, useRef } from "react";
-import type { StickerResult } from "@/lib/types";
+import type { StickerResult } from "../lib/types";
 
 interface ResultGridProps {
   results: StickerResult[];

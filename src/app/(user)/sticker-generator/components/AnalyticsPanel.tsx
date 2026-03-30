@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import type { StickerFormState, ExtractedElement, ModelConfig, ModelId } from "@/lib/types";
+import type { StickerFormState, ExtractedElement, ModelConfig, ModelId } from "../lib/types";
 
 interface AnalyticsPanelProps {
   formState: StickerFormState;
