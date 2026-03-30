@@ -1,4 +1,14 @@
+'use client';
+
+import { useRef } from 'react';
+
 export default function ProductAsset() {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleBrowseClick = () => {
+    fileInputRef.current?.click();
+  };
+
   return (
     <div className="flex flex-col rounded-xl bg-white p-6 shadow-sm ring-1 ring-zinc-200">
       <div className="mb-4 flex items-center gap-2">
@@ -6,21 +16,35 @@ export default function ProductAsset() {
         <h2 className="text-lg font-bold text-zinc-900">Product Asset</h2>
       </div>
       
-      {/* Image Placeholder */}
-      <div className="relative aspect-square w-full overflow-hidden rounded-lg bg-zinc-100 ring-1 ring-zinc-200/50 flex items-center justify-center">
-        {/* We use a gradient and some shapes to simulate the premium 3D pod from the mockup */}
-        <div className="absolute inset-0 bg-gradient-to-b from-slate-700 to-slate-900" />
+      {/* Upload Zone */}
+      <div className="relative flex aspect-square w-full flex-col items-center justify-center rounded-xl border-[3px] border-dashed border-slate-200 bg-white p-6 text-center transition-colors hover:border-slate-300">
+        <input 
+          type="file" 
+          ref={fileInputRef}
+          className="hidden" 
+          accept="image/png, image/jpeg" 
+        />
         
-        {/* Mocking the uploaded image */}
-        <div className="relative z-10 flex flex-col items-center">
-          <div className="flex items-end gap-1">
-            <div className="h-32 w-16 rounded-t-full bg-slate-300 shadow-xl" />
-            <div className="h-40 w-20 rounded-t-full bg-slate-200 shadow-xl" />
-          </div>
-          <div className="h-4 w-40 rounded-full bg-slate-400 mt-2 shadow-2xl" />
+        {/* Icon Circle */}
+        <div className="mb-5 flex h-[72px] w-[72px] items-center justify-center rounded-full bg-[#EDF2FE] text-[#2563EB]">
+          <span className="material-symbols-outlined text-[32px]">upload_file</span>
         </div>
         
-        <div className="absolute inset-0 border-[8px] border-dashed border-zinc-900/10 pointer-events-none" />
+        {/* Text */}
+        <h3 className="mb-2 text-[19px] font-bold tracking-tight text-slate-900">
+          Drop, browse, or paste
+        </h3>
+        <p className="mb-7 text-[15px] font-medium text-slate-500 tracking-wide">
+          PNG, JPG up to 10MB &middot; <span className="font-bold text-[#2563EB]">Ctrl+V</span> to paste
+        </p>
+
+        {/* Button */}
+        <button 
+          onClick={handleBrowseClick}
+          className="rounded-xl bg-[#111827] px-8 py-3.5 text-[15px] font-bold tracking-wide text-white shadow-sm transition-all hover:bg-black active:scale-[0.98]"
+        >
+          Browse Files
+        </button>
       </div>
     </div>
   );
