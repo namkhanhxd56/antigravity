@@ -13,7 +13,7 @@ export default function ProductAsset() {
     <div className="flex flex-col rounded-xl bg-white p-6 shadow-sm ring-1 ring-zinc-200">
       <div className="mb-4 flex items-center gap-2">
         <span className="material-symbols-outlined text-[#EA580C]">image</span>
-        <h2 className="text-lg font-bold text-zinc-900">Product Asset</h2>
+        <h2 className="text-[15px] font-semibold text-zinc-800">Product Asset</h2>
       </div>
       
       {/* Upload Zone */}
@@ -31,17 +31,17 @@ export default function ProductAsset() {
         </div>
         
         {/* Text */}
-        <h3 className="mb-2 text-[19px] font-bold tracking-tight text-slate-900">
+        <h3 className="mb-2 text-[17px] font-semibold tracking-tight text-slate-800">
           Drop, browse, or paste
         </h3>
-        <p className="mb-7 text-[15px] font-medium text-slate-500 tracking-wide">
-          PNG, JPG up to 10MB &middot; <span className="font-bold text-[#2563EB]">Ctrl+V</span> to paste
+        <p className="mb-7 text-[13px] font-medium text-slate-500 tracking-wide">
+          PNG, JPG up to 10MB &middot; <span className="font-semibold text-[#2563EB]">Ctrl+V</span> to paste
         </p>
 
         {/* Button */}
         <button 
           onClick={handleBrowseClick}
-          className="rounded-xl bg-[#111827] px-8 py-3.5 text-[15px] font-bold tracking-wide text-white shadow-sm transition-all hover:bg-black active:scale-[0.98]"
+          className="rounded-xl bg-[#111827] px-8 py-3 text-[14px] font-semibold tracking-wide text-white shadow-sm transition-all hover:bg-black active:scale-[0.98]"
         >
           Browse Files
         </button>

@@ -23,14 +23,16 @@ export default function ContentCanvas({ content, isGenerating }: ContentCanvasPr
   // Sync local state when new content arrives
   useEffect(() => {
     if (content) {
-      setTitle(content.title ?? "");
-      setBullets(
-        content.bullets?.length
-          ? content.bullets
-          : ["", "", "", "", ""]
-      );
-      setDescription(content.description ?? "");
-      setSearchTerms(content.searchTerms ?? "");
+      setTimeout(() => {
+        setTitle(content.title ?? "");
+        setBullets(
+          content.bullets?.length
+            ? content.bullets
+            : ["", "", "", "", ""]
+        );
+        setDescription(content.description ?? "");
+        setSearchTerms(content.searchTerms ?? "");
+      }, 0);
     }
   }, [content]);
 
@@ -68,9 +70,9 @@ export default function ContentCanvas({ content, isGenerating }: ContentCanvasPr
 
       {/* Header */}
       <div className="mb-8 flex items-center justify-between">
-        <h1 className="text-2xl font-black text-zinc-900">Content Canvas</h1>
+        <h1 className="text-xl font-bold text-zinc-900">Content Canvas</h1>
         {content && !isGenerating && (
-          <div className="flex items-center gap-1.5 rounded-full bg-[#fed7aa] px-3 py-1 font-bold text-[#b45309] text-xs tracking-wide">
+          <div className="flex items-center gap-1.5 rounded-full bg-[#fed7aa] px-2.5 py-0.5 font-semibold text-[#b45309] text-[11px] tracking-wide">
             <span className="material-symbols-outlined text-[14px]">check_circle</span>
             AI OPTIMIZED
           </div>
@@ -86,7 +88,7 @@ export default function ContentCanvas({ content, isGenerating }: ContentCanvasPr
       {/* Product Title */}
       <div className="mb-8">
         <div className="mb-2 flex items-center justify-between">
-          <label className="font-bold text-zinc-900 text-sm">Product Title</label>
+          <label className="font-semibold text-zinc-800 text-[13px]">Product Title</label>
           <span className="text-xs text-zinc-400">
             {isGenerating ? "—" : `${title.length} / ${CONTENT_LIMITS.title}`}
           </span>
@@ -102,7 +104,7 @@ export default function ContentCanvas({ content, isGenerating }: ContentCanvasPr
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             maxLength={CONTENT_LIMITS.title}
-            className="w-full rounded-lg bg-zinc-100/80 px-4 py-3.5 text-base font-bold text-zinc-800 focus:outline-none focus:ring-2 focus:ring-[#EA580C]"
+            className="w-full rounded-lg bg-zinc-100/80 px-3.5 py-3 text-[14px] font-medium text-zinc-800 focus:outline-none focus:ring-1 focus:ring-[#EA580C]"
             placeholder="Product title will appear here…"
           />
         )}
@@ -111,7 +113,7 @@ export default function ContentCanvas({ content, isGenerating }: ContentCanvasPr
       {/* Feature Bullets */}
       <div className="mb-8">
         <div className="mb-3 flex items-center justify-between">
-          <label className="font-bold text-zinc-900 text-sm">
+          <label className="font-semibold text-zinc-800 text-[13px]">
             Feature Bullets ({bullets.length}/{CONTENT_LIMITS.bulletMax})
           </label>
           {!isGenerating && (
@@ -155,7 +157,7 @@ export default function ContentCanvas({ content, isGenerating }: ContentCanvasPr
                 <textarea
                   value={bullet}
                   onChange={(e) => updateBullet(idx, e.target.value)}
-                  className="w-full min-h-[48px] resize-none bg-transparent py-2.5 pr-3 text-sm text-zinc-700 placeholder:text-zinc-400 focus:outline-none leading-relaxed"
+                  className="w-full min-h-[48px] resize-none bg-transparent py-2.5 pr-3 text-[13px] text-zinc-700 placeholder:text-zinc-400 focus:outline-none leading-relaxed"
                   rows={2}
                   spellCheck={false}
                   placeholder={`Bullet point ${idx + 1}…`}
@@ -169,7 +171,7 @@ export default function ContentCanvas({ content, isGenerating }: ContentCanvasPr
       {/* Product Description */}
       <div className="mb-8">
         <div className="mb-2 flex items-center justify-between">
-          <label className="font-bold text-zinc-900 text-sm">Product Description</label>
+          <label className="font-semibold text-zinc-800 text-[13px]">Product Description</label>
           <span className="text-xs text-zinc-400">
             {isGenerating ? "—" : `${description.length} / ${CONTENT_LIMITS.description}`}
           </span>
@@ -185,7 +187,7 @@ export default function ContentCanvas({ content, isGenerating }: ContentCanvasPr
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             maxLength={CONTENT_LIMITS.description}
-            className="w-full min-h-[160px] resize-none rounded-lg bg-zinc-100/80 p-4 text-sm text-zinc-700 leading-relaxed focus:outline-none focus:ring-2 focus:ring-[#EA580C]"
+            className="w-full min-h-[160px] resize-none rounded-lg bg-zinc-100/80 p-3.5 text-[13px] text-zinc-700 leading-relaxed focus:outline-none focus:ring-1 focus:ring-[#EA580C]"
             spellCheck={false}
             placeholder="Product description will appear here…"
           />
@@ -195,7 +197,7 @@ export default function ContentCanvas({ content, isGenerating }: ContentCanvasPr
       {/* Generic Search Keywords */}
       <div>
         <div className="mb-2 flex items-center justify-between">
-          <label className="font-bold text-zinc-900 text-sm">Generic Search Keywords</label>
+          <label className="font-semibold text-zinc-800 text-[13px]">Generic Search Keywords</label>
           <span className="text-xs text-zinc-400">
             {isGenerating ? "—" : `${searchTerms.length} / ${CONTENT_LIMITS.searchTerms}`}
           </span>
@@ -209,7 +211,7 @@ export default function ContentCanvas({ content, isGenerating }: ContentCanvasPr
             value={searchTerms}
             onChange={(e) => setSearchTerms(e.target.value)}
             maxLength={CONTENT_LIMITS.searchTerms}
-            className="w-full min-h-[60px] resize-none rounded-lg bg-zinc-200/60 p-3.5 text-sm text-zinc-700 focus:outline-none focus:ring-2 focus:ring-[#EA580C]"
+            className="w-full min-h-[60px] resize-none rounded-lg bg-zinc-200/60 p-3 text-[13px] text-zinc-700 focus:outline-none focus:ring-1 focus:ring-[#EA580C]"
             spellCheck={false}
             placeholder="space-separated search terms…"
           />

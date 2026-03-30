@@ -23,7 +23,7 @@ export default function KeywordBank({ value, onChange }: KeywordBankProps) {
     <div className="flex h-full flex-col rounded-xl bg-white p-6 shadow-sm ring-1 ring-zinc-200">
       <div className="mb-4 flex items-center gap-2">
         <span className="material-symbols-outlined text-[#EA580C] rotate-45 transform">key</span>
-        <h2 className="text-lg font-bold text-zinc-900">Keyword Bank</h2>
+        <h2 className="text-[15px] font-semibold text-zinc-800">Keyword Bank</h2>
       </div>
 
       <div className="flex-1">
@@ -36,7 +36,7 @@ export default function KeywordBank({ value, onChange }: KeywordBankProps) {
         />
       </div>
 
-      <div className="mt-4 flex items-center justify-between border-t border-zinc-100 pt-4 text-xs font-bold tracking-wider">
+      <div className="mt-4 flex items-center justify-between border-t border-zinc-100 pt-4 text-[11px] font-semibold tracking-wider">
         <span className="text-zinc-500">SUGGESTED INTENSITY</span>
         <span className={intensityColor}>
           {intensity}{keywordCount > 0 ? ` (${keywordCount})` : ""}

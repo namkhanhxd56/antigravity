@@ -41,7 +41,7 @@ export default function ContentCuratorLayout({
 
       {/* Footer */}
       <footer className="shrink-0 border-t-4 border-[#EA580C] bg-[#111827] py-3 text-center text-xs font-medium tracking-wider text-zinc-400">
-        DEVELOPED BY AI STEPHEN 10K3D
+        Created by Stephen 10K3D with AI assistance
       </footer>
     </div>
   );
