@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import dynamic from "next/dynamic";
 import ProductAsset from "./components/ProductAsset";
 import SkillConfig from "./components/SkillConfig";
 import KeywordBank from "./components/KeywordBank";
@@ -11,15 +10,14 @@ import { getStoredModel } from "./components/ContentCuratorNav";
 import type { ContentListing } from "./lib/types";
 import { useCuratorMode } from "./lib/ModeContext";
 
-/**
- * ⚠️ DEV ONLY — DevInspector.tsx nằm trong .gitignore.
- * Dynamic import với fallback null: nếu file không tồn tại (production)
- * thì component trả về null, không có lỗi build.
- */
-const DevInspector = dynamic(
-  () => import("./components/DevInspector").catch(() => ({ default: () => null })),
-  { ssr: false }
-);
+// ─── DEV ONLY ─────────────────────────────────────────────────────────────────
+// Để bật Dev Inspector khi làm việc local:
+//   1. Uncomment 2 dòng dưới
+//   2. KHÔNG commit thay đổi này (DevInspector.tsx đã nằm trong .gitignore)
+//
+// import DevInspector from "./components/DevInspector";
+// const DEV_INSPECTOR = true;
+// ─────────────────────────────────────────────────────────────────────────────
 
 export default function ContentCuratorPage() {
   const [productImage, setProductImage] = useState<string | null>(null);
@@ -32,8 +30,8 @@ export default function ContentCuratorPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [liveContentText, setLiveContentText] = useState("");
-  // Capture raw AI response để truyền xuống DevInspector
-  const [rawResponse, setRawResponse] = useState<string | undefined>(undefined);
+  // DEV: uncomment khi bật DevInspector
+  // const [rawResponse, setRawResponse] = useState<string | undefined>(undefined);
   const { mode } = useCuratorMode();
 
   const handleGenerate = useCallback(async () => {
@@ -64,9 +62,8 @@ export default function ContentCuratorPage() {
 
       if (data.success && data.listing) {
         setContent(data.listing);
-        if (data._debug?.rawResponse) {
-          setRawResponse(data._debug.rawResponse);
-        }
+        // DEV: uncomment khi bật DevInspector
+        // if (data._debug?.rawResponse) setRawResponse(data._debug.rawResponse);
       } else {
         setError(data.error ?? "Generation failed. Please try again.");
       }
@@ -94,16 +91,8 @@ export default function ContentCuratorPage() {
           onGenerate={handleGenerate}
           isGenerating={isGenerating}
           canGenerate={keywords.trim().length > 0}
-          devPanel={
-            <DevInspector
-              keywords={keywords}
-              skillName={selectedSkill}
-              enableOccasion={enableOccasion}
-              occasion={occasion}
-              notes={notes}
-              rawResponse={rawResponse}
-            />
-          }
+          // DEV: uncomment dòng dưới sau khi bật DevInspector ở trên
+          // devPanel={typeof DEV_INSPECTOR !== "undefined" && <DevInspector keywords={keywords} skillName={selectedSkill} enableOccasion={enableOccasion} occasion={occasion} notes={notes} rawResponse={rawResponse} />}
         />
         {error && (
           <div className="rounded-none bg-red-50 dark:bg-red-950/30 px-6 py-4 text-[13px] text-red-700 dark:text-red-400">
