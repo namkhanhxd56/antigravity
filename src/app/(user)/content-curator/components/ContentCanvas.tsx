@@ -236,6 +236,12 @@ export default function ContentCanvas({ content, isGenerating, onContentChange, 
     const sectionKey = section === "bullet" ? `bullet-${bulletIndex}` : section;
     setRewritingSection(sectionKey);
 
+    // Resolve the live char limit for this section from useContentLimits
+    const charLimit =
+      section === "title" ? limits.title :
+      section === "bullet" ? limits.bulletItem :
+      limits.description;
+
     try {
       const apiKey = getStoredApiKey() || "";
       const body: RewriteRequest = {
@@ -243,6 +249,7 @@ export default function ContentCanvas({ content, isGenerating, onContentChange, 
         bulletIndex,
         currentContent,
         instruction,
+        charLimit,
         model: getStoredModel(),
         context: {
           skillName,
@@ -269,7 +276,7 @@ export default function ContentCanvas({ content, isGenerating, onContentChange, 
     } finally {
       setRewritingSection(null);
     }
-  }, [skillName, bankKeywords, title, description, updateTitle, updateDescription]);
+  }, [skillName, bankKeywords, title, description, limits, updateTitle, updateDescription]);
 
   const keywordsList = useMemo(() => Array.from(new Set(
     bankKeywords

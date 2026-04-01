@@ -42,3 +42,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# ─── Dev-only tools (không deploy lên production) ────────────────────────────
+# Xóa 2 dòng dưới để ẩn inspector khi push git:
+src/app/\(user\)/content-curator/components/DevInspector.tsx
+src/app/?user?/content-curator/api/preview-prompt/

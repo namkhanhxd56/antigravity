@@ -1,14 +1,25 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import dynamic from "next/dynamic";
 import ProductAsset from "./components/ProductAsset";
 import SkillConfig from "./components/SkillConfig";
 import KeywordBank from "./components/KeywordBank";
 import ContentCanvas from "./components/ContentCanvas";
 import { getStoredApiKey } from "@/lib/client-key-storage";
 import { getStoredModel } from "./components/ContentCuratorNav";
-import type { ContentListing, DebugData } from "./lib/types";
+import type { ContentListing } from "./lib/types";
 import { useCuratorMode } from "./lib/ModeContext";
+
+/**
+ * ⚠️ DEV ONLY — DevInspector.tsx nằm trong .gitignore.
+ * Dynamic import với fallback null: nếu file không tồn tại (production)
+ * thì component trả về null, không có lỗi build.
+ */
+const DevInspector = dynamic(
+  () => import("./components/DevInspector").catch(() => ({ default: () => null })),
+  { ssr: false }
+);
 
 export default function ContentCuratorPage() {
   const [productImage, setProductImage] = useState<string | null>(null);
@@ -21,31 +32,9 @@ export default function ContentCuratorPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [liveContentText, setLiveContentText] = useState("");
-  const [debugData, setDebugData] = useState<DebugData | null>(null);
-  const [isInspecting, setIsInspecting] = useState(false);
+  // Capture raw AI response để truyền xuống DevInspector
+  const [rawResponse, setRawResponse] = useState<string | undefined>(undefined);
   const { mode } = useCuratorMode();
-
-  const handleInspect = useCallback(async () => {
-    setIsInspecting(true);
-    try {
-      const res = await fetch("/content-curator/api/preview-prompt", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          keywords,
-          skillName: selectedSkill,
-          ...(enableOccasion && { occasion }),
-          ...(notes.trim() && { notes: notes.trim() }),
-        }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setDebugData((prev) => ({ ...prev, prompt: data.prompt, meta: data.meta }));
-      }
-    } catch { /* ignore */ } finally {
-      setIsInspecting(false);
-    }
-  }, [keywords, selectedSkill, enableOccasion, occasion, notes]);
 
   const handleGenerate = useCallback(async () => {
     if (!keywords.trim()) return;
@@ -65,11 +54,8 @@ export default function ContentCuratorPage() {
           keywords,
           skillName: selectedSkill,
           model: getStoredModel(),
-          // Chỉ đưa vào khi người dùng bật occasion
           ...(enableOccasion && { occasion }),
-          // Chỉ đưa vào khi notes không trống
           ...(notes.trim() && { notes: notes.trim() }),
-          // Image đính kèm (dạng base64)
           ...(productImage && { image: productImage }),
         }),
       });
@@ -79,7 +65,7 @@ export default function ContentCuratorPage() {
       if (data.success && data.listing) {
         setContent(data.listing);
         if (data._debug?.rawResponse) {
-          setDebugData((prev) => ({ ...prev, rawResponse: data._debug.rawResponse }));
+          setRawResponse(data._debug.rawResponse);
         }
       } else {
         setError(data.error ?? "Generation failed. Please try again.");
@@ -89,7 +75,7 @@ export default function ContentCuratorPage() {
     } finally {
       setIsGenerating(false);
     }
-  }, [keywords, selectedSkill, enableOccasion, occasion, notes]);
+  }, [keywords, selectedSkill, enableOccasion, occasion, notes, productImage]);
 
   return (
     <div className="flex flex-col lg:flex-row h-full w-full divide-y lg:divide-y-0 lg:divide-x divide-zinc-200 dark:divide-zinc-800">
@@ -108,9 +94,16 @@ export default function ContentCuratorPage() {
           onGenerate={handleGenerate}
           isGenerating={isGenerating}
           canGenerate={keywords.trim().length > 0}
-          onInspect={handleInspect}
-          isInspecting={isInspecting}
-          debugData={debugData}
+          devPanel={
+            <DevInspector
+              keywords={keywords}
+              skillName={selectedSkill}
+              enableOccasion={enableOccasion}
+              occasion={occasion}
+              notes={notes}
+              rawResponse={rawResponse}
+            />
+          }
         />
         {error && (
           <div className="rounded-none bg-red-50 dark:bg-red-950/30 px-6 py-4 text-[13px] text-red-700 dark:text-red-400">

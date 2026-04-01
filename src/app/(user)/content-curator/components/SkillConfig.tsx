@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { DEFAULT_SKILL_OPTIONS, type SkillOption, type DebugData } from "../lib/types";
+import { DEFAULT_SKILL_OPTIONS, type SkillOption } from "../lib/types";
 import CustomizationContent from "./CustomizationContent";
 
 interface SkillConfigProps {
@@ -16,10 +16,8 @@ interface SkillConfigProps {
   onGenerate: () => void;
   isGenerating: boolean;
   canGenerate: boolean;
-  /** Dev Inspector */
-  onInspect: () => Promise<void>;
-  isInspecting: boolean;
-  debugData: DebugData | null;
+  /** Slot cho Dev Inspector — undefined khi production (file bị gitignore) */
+  devPanel?: React.ReactNode;
 }
 
 export default function SkillConfig({
@@ -34,13 +32,9 @@ export default function SkillConfig({
   onGenerate,
   isGenerating,
   canGenerate,
-  onInspect,
-  isInspecting,
-  debugData,
+  devPanel,
 }: SkillConfigProps) {
   const [isReloading, setIsReloading] = useState(false);
-  const [inspectorOpen, setInspectorOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"prompt" | "response">("prompt");
   const [skillOptions, setSkillOptions] = useState<SkillOption[]>(DEFAULT_SKILL_OPTIONS);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -200,105 +194,8 @@ export default function SkillConfig({
         )}
       </button>
 
-      {/* ── Dev Inspect Button ── */}
-      <button
-        onClick={async () => {
-          if (!inspectorOpen) {
-            await onInspect();
-            setActiveTab("prompt");
-          }
-          setInspectorOpen((v) => !v);
-        }}
-        disabled={isInspecting}
-        className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-zinc-300 dark:border-zinc-700 py-2 text-[12px] font-medium text-zinc-400 dark:text-zinc-500 hover:border-zinc-400 dark:hover:border-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors disabled:opacity-50"
-      >
-        {isInspecting ? (
-          <span className="material-symbols-outlined animate-spin text-[14px]">progress_activity</span>
-        ) : (
-          <span className="material-symbols-outlined text-[14px]">
-            {inspectorOpen ? "visibility_off" : "manage_search"}
-          </span>
-        )}
-        {isInspecting ? "Loading…" : inspectorOpen ? "Hide Inspector" : "Inspect Prompt"}
-      </button>
-
-      {/* ── Dev Inspector Panel ── */}
-      {inspectorOpen && (
-        <div className="mt-3 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 overflow-hidden">
-
-          {/* Tab bar */}
-          <div className="flex border-b border-zinc-200 dark:border-zinc-700">
-            <button
-              onClick={() => setActiveTab("prompt")}
-              className={`flex-1 py-2 text-[11px] font-semibold tracking-wider uppercase transition-colors ${activeTab === "prompt" ? "bg-white dark:bg-zinc-800 text-[#EA580C]" : "text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300"}`}
-            >
-              Layer 1 — Prompt
-            </button>
-            <button
-              onClick={() => setActiveTab("response")}
-              className={`flex-1 py-2 text-[11px] font-semibold tracking-wider uppercase transition-colors ${activeTab === "response" ? "bg-white dark:bg-zinc-800 text-[#EA580C]" : "text-zinc-400 dark:text-zinc-500 hover:text-zinc-600 dark:hover:text-zinc-300"}`}
-            >
-              Layer 2 — Response
-            </button>
-          </div>
-
-          {/* Meta bar */}
-          {debugData?.meta && (
-            <div className="flex flex-wrap gap-x-4 gap-y-1 border-b border-zinc-200 dark:border-zinc-700 px-3 py-2 bg-zinc-100 dark:bg-zinc-800/60">
-              <span className="text-[10px] text-zinc-500">
-                Skill: <strong className="text-zinc-700 dark:text-zinc-300">{debugData.meta.skillName}</strong>
-              </span>
-              <span className="text-[10px] text-zinc-500">
-                Skill: <strong className="text-zinc-700 dark:text-zinc-300">{debugData.meta.skillCharCount} chars</strong>
-              </span>
-              <span className="text-[10px] text-zinc-500">
-                Base rules: <strong className="text-zinc-700 dark:text-zinc-300">{debugData.meta.baseRulesCharCount} chars</strong>
-              </span>
-              <span className="text-[10px] text-zinc-500">
-                Total prompt: <strong className="text-zinc-700 dark:text-zinc-300">{debugData.meta.totalPromptChars} chars</strong>
-              </span>
-              {debugData.meta.duplicateWarnings.length > 0 && (
-                <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold">
-                  ⚠ {debugData.meta.duplicateWarnings.length} duplicate line(s) in skill
-                </span>
-              )}
-            </div>
-          )}
-
-          {/* Duplicate warnings */}
-          {activeTab === "prompt" && debugData?.meta?.duplicateWarnings?.length ? (
-            <div className="border-b border-zinc-200 dark:border-zinc-700 px-3 py-2 bg-amber-50 dark:bg-amber-950/30">
-              <p className="text-[10px] font-semibold text-amber-700 dark:text-amber-400 mb-1">Duplicate lines detected in skill file:</p>
-              <ul className="space-y-0.5">
-                {debugData.meta.duplicateWarnings.map((line, i) => (
-                  <li key={i} className="text-[10px] text-amber-600 dark:text-amber-500 font-mono truncate">• {line}</li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-
-          {/* Content */}
-          <div className="max-h-[400px] overflow-y-auto p-3">
-            {activeTab === "prompt" ? (
-              debugData?.prompt ? (
-                <pre className="whitespace-pre-wrap font-mono text-[10px] leading-relaxed text-zinc-700 dark:text-zinc-300">
-                  {debugData.prompt}
-                </pre>
-              ) : (
-                <p className="text-[11px] text-zinc-400 italic">Click "Inspect Prompt" to load.</p>
-              )
-            ) : (
-              debugData?.rawResponse ? (
-                <pre className="whitespace-pre-wrap font-mono text-[10px] leading-relaxed text-zinc-700 dark:text-zinc-300">
-                  {debugData.rawResponse}
-                </pre>
-              ) : (
-                <p className="text-[11px] text-zinc-400 italic">Run Generate first to see the raw AI response.</p>
-              )
-            )}
-          </div>
-        </div>
-      )}
+      {/* Dev Inspector slot — chỉ có khi file DevInspector.tsx tồn tại (dev only) */}
+      {devPanel}
 
     </div>
   );

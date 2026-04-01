@@ -31,6 +31,11 @@ export interface RewriteRequest {
   instruction: string;
   /** Gemini model ID */
   model?: string;
+  /**
+   * Character limit for this section — passed from client's useContentLimits.
+   * Server falls back to limits.json if not provided.
+   */
+  charLimit?: number;
   context: {
     skillName: string;
     keywords: string;

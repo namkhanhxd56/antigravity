@@ -1,8 +1,11 @@
 /**
  * API Route: POST /content-curator/api/rewrite
  *
- * Rewrite một section cụ thể (title | bullet | description) dựa trên
- * nội dung hiện tại + instruction của user.
+ * Rewrite một section cụ thể theo 4 bước rõ ràng:
+ *   1. Xác định vai trò & section cần viết
+ *   2. Đọc nội dung hiện tại
+ *   3. Đọc yêu cầu của user
+ *   4. Xác định giới hạn ký tự → viết đúng yêu cầu, không vượt limit
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -11,73 +14,72 @@ import fs from "fs";
 import path from "path";
 import type { RewriteRequest } from "../../lib/types";
 
-const SKILLS_DIR = path.join(
-  process.cwd(), "src", "app", "(user)", "content-curator", "skills"
+const BASE_DIR = path.join(
+  process.cwd(), "src", "app", "(user)", "content-curator", "skills", "_base"
 );
-const BASE_DIR = path.join(SKILLS_DIR, "_base");
 
-function readSkillFile(skillName: string): string {
-  try {
-    const filePath = path.join(SKILLS_DIR, skillName);
-    if (fs.existsSync(filePath)) return fs.readFileSync(filePath, "utf-8");
-  } catch { /* ignore */ }
-  return "";
+// ─── Fallback limits (khi client không truyền charLimit) ─────────────────────
+
+interface LimitsConfig {
+  title: number;
+  bulletItem: number;
+  description: number;
 }
 
-function readBaseRules(): string {
+const DEFAULT_LIMITS: LimitsConfig = { title: 200, bulletItem: 500, description: 2000 };
+
+function readLimits(): LimitsConfig {
   try {
-    const filePath = path.join(BASE_DIR, "base_rules.md");
-    if (fs.existsSync(filePath)) return fs.readFileSync(filePath, "utf-8");
+    const filePath = path.join(BASE_DIR, "limits.json");
+    if (fs.existsSync(filePath)) {
+      return { ...DEFAULT_LIMITS, ...JSON.parse(fs.readFileSync(filePath, "utf-8")) };
+    }
   } catch { /* ignore */ }
-  return "";
+  return DEFAULT_LIMITS;
 }
 
-function buildRewritePrompt(body: RewriteRequest, skillContent: string, baseRules: string): string {
-  const { section, bulletIndex, currentContent, instruction, context } = body;
+
+// ─── Prompt builder ───────────────────────────────────────────────────────────
+
+function buildRewritePrompt(
+  body: RewriteRequest,
+  resolvedCharLimit: number,
+): string {
+  const { section, bulletIndex, currentContent, instruction } = body;
 
   const sectionLabel =
-    section === "title" ? "Product Title" :
+    section === "title"  ? "Product Title" :
     section === "bullet" ? `Feature Bullet #${(bulletIndex ?? 0) + 1}` :
-    "Product Description";
+                           "Product Description";
 
-  const limits =
-    section === "title" ? "Max 200 characters." :
-    section === "bullet" ? "Max 500 characters." :
-    "Max 2000 characters.";
+  const overBy = currentContent.length - resolvedCharLimit;
+  const limitNote = overBy > 0
+    ? `Current content is ${overBy} chars OVER the limit — you MUST shorten it.`
+    : `Current content is within limit (${currentContent.length}/${resolvedCharLimit} chars).`;
 
-  const contextBlock = [
-    context.keywords ? `KEYWORDS: ${context.keywords}` : "",
-    context.otherSections?.title && section !== "title"
-      ? `CURRENT TITLE: ${context.otherSections.title}` : "",
-    context.otherSections?.description && section !== "description"
-      ? `CURRENT DESCRIPTION: ${context.otherSections.description}` : "",
-  ].filter(Boolean).join("\n");
+  return [
+    `You are an Amazon listing copywriter. Rewrite the ${sectionLabel} below.`,
 
-  return `You are an Amazon listing copywriter. Rewrite only the specified section based on the user's instruction.
+    `--- CURRENT CONTENT (${currentContent.length} chars) ---\n${currentContent}\n--- END ---`,
 
-${baseRules ? `BASE RULES:\n${baseRules}\n` : ""}
-${skillContent ? `SKILL / STYLE GUIDE:\n${skillContent}\n` : ""}
-CONTEXT:
-${contextBlock}
+    `--- WHAT TO CHANGE ---\n${instruction}\n--- END ---`,
 
-SECTION TO REWRITE: ${sectionLabel}
-CURRENT CONTENT:
-${currentContent}
-
-USER INSTRUCTION:
-${instruction}
-
-CONSTRAINTS:
-- ${limits}
-- Keep keyword density high. Do not remove existing keywords unless instructed.
-- Return ONLY the rewritten text for this section. No labels, no JSON, no markdown.
-- Do not add bullet symbols (•, -, *) at the start.`;
+    `--- CHARACTER LIMIT ---\n` +
+    `Maximum: ${resolvedCharLimit} characters.\n` +
+    `${limitNote}\n` +
+    `Rules:\n` +
+    `- Stay strictly under ${resolvedCharLimit} characters.\n` +
+    `- Do not add bullet symbols (•, -, *) at the start.\n` +
+    `- Return ONLY the rewritten text. No labels, no JSON, no explanation.`,
+  ].join("\n\n");
 }
+
+// ─── POST Handler ─────────────────────────────────────────────────────────────
 
 export async function POST(request: NextRequest) {
   try {
     const body = (await request.json()) as RewriteRequest;
-    const { section, currentContent, instruction, model } = body;
+    const { section, currentContent, instruction, model, charLimit } = body;
 
     if (!section || !currentContent?.trim() || !instruction?.trim()) {
       return NextResponse.json(
@@ -96,20 +98,37 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const skillContent = readSkillFile(body.context?.skillName || "Editorial_Pro_V2.md");
-    const baseRules = readBaseRules();
-    const prompt = buildRewritePrompt(body, skillContent, baseRules);
+    // Resolve char limit: client value takes priority, fall back to limits.json
+    const fileLimits = readLimits();
+    const resolvedCharLimit =
+      charLimit ??
+      (section === "title"       ? fileLimits.title :
+       section === "bullet"      ? fileLimits.bulletItem :
+                                   fileLimits.description);
+
+    const prompt = buildRewritePrompt(body, resolvedCharLimit);
 
     const genAI = new GoogleGenerativeAI(apiKey);
     const geminiModel = genAI.getGenerativeModel({
       model: model || "gemini-2.5-flash",
-      generationConfig: { temperature: 0.7 },
+      generationConfig: { temperature: 0.65 },
     });
 
     const result = await geminiModel.generateContent(prompt);
     const rewritten = result.response.text().trim().replace(/^["']+|["']+$/g, "");
 
-    return NextResponse.json({ success: true, rewritten });
+    // Warn if AI still exceeded the limit
+    const overBy = rewritten.length - resolvedCharLimit;
+
+    return NextResponse.json({
+      success: true,
+      rewritten,
+      meta: {
+        charLimit: resolvedCharLimit,
+        resultLength: rewritten.length,
+        overBy: overBy > 0 ? overBy : 0,
+      },
+    });
   } catch (error) {
     console.error("[content-curator/rewrite] error:", error);
     const message = error instanceof Error ? error.message : "Unknown error";
