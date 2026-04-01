@@ -1,0 +1,8 @@
+{
+  "_comment": "Amazon US listing character limits. Sửa file này khi Amazon thay đổi policy — tất cả skill tự cập nhật.",
+  "title": 200,
+  "bulletCount": 5,
+  "bulletItem": 500,
+  "description": 2000,
+  "searchTerms": 250
+}

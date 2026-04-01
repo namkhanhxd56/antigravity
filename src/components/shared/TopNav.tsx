@@ -1,10 +1,29 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useTheme } from "next-themes";
 import { getStoredApiKey, setStoredApiKey } from "@/lib/client-key-storage";
+import { useContentLimits } from "@/app/(user)/content-curator/lib/useContentLimits";
 
 export default function TopNav() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [apiKeyInput, setApiKeyInput] = useState("");
+  const [mounted, setMounted] = useState(false);
+  const { theme, setTheme } = useTheme();
+  const [selectedModel, setSelectedModel] = useState("gemini-1.5-flash");
+  const { limits, save: saveLimits } = useContentLimits();
+  const [limitInputs, setLimitInputs] = useState({ title: "", bulletItem: "", description: "", searchTerms: "" });
+
+  // Sync displayed limit inputs when limits load
+  useEffect(() => {
+    setTimeout(() => {
+      setLimitInputs({
+        title: String(limits.title),
+        bulletItem: String(limits.bulletItem),
+        description: String(limits.description),
+        searchTerms: String(limits.searchTerms),
+      });
+    }, 0);
+  }, [limits]);
 
   useEffect(() => {
     // Load existing key from localStorage when the component mounts
@@ -12,12 +31,29 @@ export default function TopNav() {
     if (savedKey) {
       setTimeout(() => setApiKeyInput(savedKey), 0);
     }
+    setTimeout(() => {
+      setMounted(true);
+      
+      const savedModel = localStorage.getItem("selectedModel");
+      if (savedModel) setSelectedModel(savedModel);
+    }, 0);
   }, []);
 
   const handleSaveKey = () => {
     setStoredApiKey(apiKeyInput);
+    localStorage.setItem("selectedModel", selectedModel);
+    // Save content limits
+    saveLimits({
+      title: Number(limitInputs.title) || limits.title,
+      bulletItem: Number(limitInputs.bulletItem) || limits.bulletItem,
+      description: Number(limitInputs.description) || limits.description,
+      searchTerms: Number(limitInputs.searchTerms) || limits.searchTerms,
+    });
     setIsSettingsOpen(false);
-    // Optionally trigger a reload or toast here
+  };
+
+  const toggleDarkMode = () => {
+    setTheme(theme === "dark" ? "light" : "dark");
   };
   return (
     <header className="flex items-center justify-between border-b border-slate-300 px-6 py-3 bg-white shrink-0">
@@ -72,12 +108,63 @@ export default function TopNav() {
             >
               <span className="material-symbols-outlined">close</span>
             </button>
-            <h2 className="text-xl font-bold text-slate-900 mb-2">API Settings</h2>
+            <h2 className="text-xl font-bold text-slate-900 mb-2">App Settings</h2>
             <p className="text-sm text-slate-500 mb-6">
-              Enter your Gemini API Key to use this app. Your key is stored locally in your browser and never saved on our servers.
+              Configure your AI models, API keys, and app preferences. Keys are stored locally.
             </p>
 
             <div className="space-y-4">
+              {/* Theme Toggle */}
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-semibold text-slate-700">Dark Mode</label>
+                <button
+                  onClick={toggleDarkMode}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${mounted && theme === "dark" ? 'bg-[#EA580C]' : 'bg-slate-300'}`}
+                >
+                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${mounted && theme === "dark" ? 'translate-x-6' : 'translate-x-1'}`} />
+                </button>
+              </div>
+
+              {/* Model Select */}
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">
+                  AI Model
+                </label>
+                <select
+                  value={selectedModel}
+                  onChange={(e) => setSelectedModel(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-[#EA580C] outline-none text-sm text-slate-800"
+                >
+                  <option value="gemini-1.5-flash">Gemini 1.5 Flash (Fast)</option>
+                  <option value="gemini-1.5-pro">Gemini 1.5 Pro (Advanced)</option>
+                </select>
+              </div>
+
+              {/* Content Limits */}
+              <div>
+                <p className="text-sm font-semibold text-slate-700 mb-2">Amazon Character Limits</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { key: "title", label: "Title" },
+                    { key: "bulletItem", label: "Each Bullet" },
+                    { key: "description", label: "Description" },
+                    { key: "searchTerms", label: "Keywords" },
+                  ].map(({ key, label }) => (
+                    <div key={key}>
+                      <label className="block text-xs text-slate-500 mb-0.5">{label}</label>
+                      <input
+                        type="number"
+                        min={1}
+                        value={limitInputs[key as keyof typeof limitInputs]}
+                        onChange={(e) => setLimitInputs(prev => ({ ...prev, [key]: e.target.value }))}
+                        className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-[#EA580C] outline-none text-sm text-slate-800"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* API Key */}
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1">
                   Gemini API Key
@@ -87,15 +174,18 @@ export default function TopNav() {
                   value={apiKeyInput}
                   onChange={(e) => setApiKeyInput(e.target.value)}
                   placeholder="AIzaSy..."
-                  className="w-full bg-slate-50 border border-slate-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-primary outline-none"
+                  className="w-full bg-slate-50 border border-slate-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-[#EA580C] outline-none text-sm text-slate-800"
                 />
               </div>
-              <button
-                onClick={handleSaveKey}
-                className="w-full bg-primary text-white font-bold py-2.5 rounded-lg hover:bg-primary/90 transition-colors"
-              >
-                Save API Key
-              </button>
+
+              <div className="pt-2">
+                <button
+                  onClick={handleSaveKey}
+                  className="w-full bg-[#111827] text-white font-bold py-2.5 rounded-lg hover:bg-black transition-colors"
+                >
+                  Save Settings
+                </button>
+              </div>
             </div>
           </div>
         </div>
