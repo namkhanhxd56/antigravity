@@ -4,10 +4,8 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useTheme } from "next-themes";
 import { useContentLimits, type ContentLimits } from "../lib/useContentLimits";
-import { getStoredApiKey, setStoredApiKey, removeStoredApiKey } from "@/lib/client-key-storage";
+import { getCuratorApiKey, setCuratorApiKey, removeCuratorApiKey, getCuratorModel, setCuratorModel } from "@/lib/client-key-storage";
 import { useCuratorMode } from "../lib/ModeContext";
-
-const MODEL_STORAGE_KEY = "amz_gemini_model";
 
 export const GEMINI_MODELS = [
   { value: "gemini-2.5-flash", label: "Gemini 2.5 Flash (Recommended)" },
@@ -18,12 +16,7 @@ export const GEMINI_MODELS = [
 export type GeminiModel = (typeof GEMINI_MODELS)[number]["value"];
 
 export function getStoredModel(): GeminiModel {
-  if (typeof window === "undefined") return "gemini-2.5-flash";
-  return (localStorage.getItem(MODEL_STORAGE_KEY) as GeminiModel) ?? "gemini-2.5-flash";
-}
-
-function setStoredModel(model: GeminiModel) {
-  localStorage.setItem(MODEL_STORAGE_KEY, model);
+  return getCuratorModel() as GeminiModel;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -91,7 +84,7 @@ export default function ContentCuratorNav() {
   useEffect(() => {
     setTimeout(() => {
       setModel(getStoredModel());
-      const saved = getStoredApiKey();
+      const saved = getCuratorApiKey();
       setApiKeyStatus(saved ? "saved" : "none");
     }, 0);
   }, []);
@@ -135,19 +128,19 @@ export default function ContentCuratorNav() {
   // Model
   const handleModelChange = (v: GeminiModel) => {
     setModel(v);
-    setStoredModel(v);
+    setCuratorModel(v);
   };
 
   // API Key
   const handleSaveKey = () => {
     if (!apiKeyInput.trim()) return;
-    setStoredApiKey(apiKeyInput.trim());
+    setCuratorApiKey(apiKeyInput.trim());
     setApiKeyInput("");
     setApiKeyStatus("saved");
   };
 
   const handleClearKey = () => {
-    removeStoredApiKey();
+    removeCuratorApiKey();
     setApiKeyStatus("none");
     setApiKeyInput("");
   };
@@ -289,7 +282,7 @@ export default function ContentCuratorNav() {
                     <div className="flex items-center gap-2">
                       <span className="material-symbols-outlined text-emerald-600 text-[16px]">check_circle</span>
                       <span className="text-[12px] font-medium text-emerald-700">
-                        Key saved: {maskKey(getStoredApiKey() ?? "")}
+                        Key saved: {maskKey(getCuratorApiKey() ?? "")}
                       </span>
                     </div>
                     <button

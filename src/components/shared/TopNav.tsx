@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useTheme } from "next-themes";
-import { getStoredApiKey, setStoredApiKey } from "@/lib/client-key-storage";
-import { useContentLimits } from "@/app/(user)/content-curator/lib/useContentLimits";
+import { getStickerApiKey, setStickerApiKey, getStickerModel, setStickerModel } from "@/lib/client-key-storage";
 
 export default function TopNav() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -10,45 +9,19 @@ export default function TopNav() {
   const [mounted, setMounted] = useState(false);
   const { theme, setTheme } = useTheme();
   const [selectedModel, setSelectedModel] = useState("gemini-1.5-flash");
-  const { limits, save: saveLimits } = useContentLimits();
-  const [limitInputs, setLimitInputs] = useState({ title: "", bulletItem: "", description: "", searchTerms: "" });
-
-  // Sync displayed limit inputs when limits load
-  useEffect(() => {
-    setTimeout(() => {
-      setLimitInputs({
-        title: String(limits.title),
-        bulletItem: String(limits.bulletItem),
-        description: String(limits.description),
-        searchTerms: String(limits.searchTerms),
-      });
-    }, 0);
-  }, [limits]);
 
   useEffect(() => {
-    // Load existing key from localStorage when the component mounts
-    const savedKey = getStoredApiKey();
-    if (savedKey) {
-      setTimeout(() => setApiKeyInput(savedKey), 0);
-    }
     setTimeout(() => {
       setMounted(true);
-      
-      const savedModel = localStorage.getItem("selectedModel");
-      if (savedModel) setSelectedModel(savedModel);
+      const savedKey = getStickerApiKey();
+      if (savedKey) setApiKeyInput(savedKey);
+      setSelectedModel(getStickerModel());
     }, 0);
   }, []);
 
   const handleSaveKey = () => {
-    setStoredApiKey(apiKeyInput);
-    localStorage.setItem("selectedModel", selectedModel);
-    // Save content limits
-    saveLimits({
-      title: Number(limitInputs.title) || limits.title,
-      bulletItem: Number(limitInputs.bulletItem) || limits.bulletItem,
-      description: Number(limitInputs.description) || limits.description,
-      searchTerms: Number(limitInputs.searchTerms) || limits.searchTerms,
-    });
+    setStickerApiKey(apiKeyInput);
+    setStickerModel(selectedModel);
     setIsSettingsOpen(false);
   };
 
@@ -138,30 +111,6 @@ export default function TopNav() {
                   <option value="gemini-1.5-flash">Gemini 1.5 Flash (Fast)</option>
                   <option value="gemini-1.5-pro">Gemini 1.5 Pro (Advanced)</option>
                 </select>
-              </div>
-
-              {/* Content Limits */}
-              <div>
-                <p className="text-sm font-semibold text-slate-700 mb-2">Amazon Character Limits</p>
-                <div className="grid grid-cols-2 gap-2">
-                  {[
-                    { key: "title", label: "Title" },
-                    { key: "bulletItem", label: "Each Bullet" },
-                    { key: "description", label: "Description" },
-                    { key: "searchTerms", label: "Keywords" },
-                  ].map(({ key, label }) => (
-                    <div key={key}>
-                      <label className="block text-xs text-slate-500 mb-0.5">{label}</label>
-                      <input
-                        type="number"
-                        min={1}
-                        value={limitInputs[key as keyof typeof limitInputs]}
-                        onChange={(e) => setLimitInputs(prev => ({ ...prev, [key]: e.target.value }))}
-                        className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-[#EA580C] outline-none text-sm text-slate-800"
-                      />
-                    </div>
-                  ))}
-                </div>
               </div>
 
               {/* API Key */}

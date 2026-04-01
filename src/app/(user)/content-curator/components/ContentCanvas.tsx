@@ -7,8 +7,9 @@ import { useUndoRedo } from "../lib/useUndoRedo";
 import TextToolbar from "./TextToolbar";
 import HighlightTextarea from "./HighlightTextarea";
 import { useMemo } from "react";
-import { getStoredApiKey } from "@/lib/client-key-storage";
+import { getCuratorApiKey } from "@/lib/client-key-storage";
 import { getStoredModel } from "./ContentCuratorNav";
+import ColumnCustomizer, { buildDefaultColumns, type Column } from "./ColumnCustomizer";
 
 /** Strip trailing volume number or "-" from a keyword line */
 function stripVolume(line: string): string {
@@ -102,6 +103,62 @@ export default function ContentCanvas({ content, isGenerating, onContentChange, 
   const [searchTerms, setSearchTerms] = useState("");
   const [showCopyPopup, setShowCopyPopup] = useState(false);
 
+  // ── Column customizer state ──
+  const [columns, setColumns] = useState<Column[]>(() => buildDefaultColumns(5));
+  const [includeHeaders, setIncludeHeaders] = useState(false);
+  const [showCustomizer, setShowCustomizer] = useState(false);
+
+  // Keep bullet columns in sync when bullets array length changes
+  useEffect(() => {
+    setColumns((prev) => {
+      const nonBullet = prev.filter((c) => !/^bullet_\d+$/.test(c.id));
+      const bulletCols: Column[] = Array.from({ length: bullets.length }, (_, i) => ({
+        id: `bullet_${i}` as Column["id"],
+        label: `Bullet ${i + 1}`,
+        isSpacer: false,
+      }));
+      // Re-insert bullets at their previous positions, appending new ones
+      const result: Column[] = [];
+      let bulletIdx = 0;
+      for (const col of prev) {
+        if (/^bullet_\d+$/.test(col.id)) {
+          if (bulletIdx < bulletCols.length) result.push(bulletCols[bulletIdx++]);
+        } else {
+          result.push(col);
+        }
+      }
+      // Append any extra bullet columns if bullets were added
+      while (bulletIdx < bulletCols.length) result.push(bulletCols[bulletIdx++]);
+      return result.length ? result : nonBullet;
+    });
+  }, [bullets.length]);
+
+  const handleCopy = useCallback(() => {
+    // Build a lookup of values by column id
+    const getValue = (id: Column["id"]): string => {
+      if (id === "title") return title;
+      if (id === "description") return description;
+      if (id === "searchTerms") return searchTerms;
+      if (id.startsWith("bullet_")) {
+        const idx = parseInt(id.replace("bullet_", ""), 10);
+        return bullets[idx] ?? "";
+      }
+      return ""; // spacer
+    };
+
+    const rows: string[] = [];
+
+    if (includeHeaders) {
+      rows.push(columns.map((c) => (c.isSpacer ? "" : c.label)).join("\t"));
+    }
+
+    rows.push(columns.map((c) => getValue(c.id)).join("\t"));
+
+    navigator.clipboard.writeText(rows.join("\n"));
+    setShowCopyPopup(true);
+    setTimeout(() => setShowCopyPopup(false), 2000);
+  }, [title, bullets, description, searchTerms, columns, includeHeaders]);
+
   // ── Rewrite state ──
   // openRewriteBar: which section has the bar open. bullet-N for bullets.
   const [openRewriteBar, setOpenRewriteBar] = useState<string | null>(null);
@@ -115,13 +172,6 @@ export default function ContentCanvas({ content, isGenerating, onContentChange, 
   const titleHistory = useUndoRedo("");
   const descHistory = useUndoRedo("");
   const kwHistory = useUndoRedo("");
-
-  const handleCopy = () => {
-    const text = `Title:\n${title}\n\nBullets:\n${bullets.map(b => '• ' + b).join('\n')}\n\nDescription:\n${description}\n\nKeywords:\n${searchTerms}`;
-    navigator.clipboard.writeText(text);
-    setShowCopyPopup(true);
-    setTimeout(() => setShowCopyPopup(false), 2000);
-  };
 
   // Fire onContentChange whenever any field changes
   useEffect(() => {
@@ -243,7 +293,7 @@ export default function ContentCanvas({ content, isGenerating, onContentChange, 
       limits.description;
 
     try {
-      const apiKey = getStoredApiKey() || "";
+      const apiKey = getCuratorApiKey() || "";
       const body: RewriteRequest = {
         section,
         bulletIndex,
@@ -304,18 +354,38 @@ export default function ContentCanvas({ content, isGenerating, onContentChange, 
               GENERATING…
             </div>
           )}
-          <button onClick={handleCopy} className="flex items-center gap-1.5 text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors text-[13px] font-medium">
-            <span className="material-symbols-outlined text-[16px]">content_copy</span>
-            Copy All
-          </button>
-          <button className="flex items-center gap-1.5 text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors text-[13px] font-medium">
-            <span className="material-symbols-outlined text-[16px]">download</span>
-            Export
-          </button>
+          {/* Copy All + Customize columns */}
+          <div className="relative flex items-center">
+            <button
+              onClick={handleCopy}
+              className="flex items-center gap-1.5 text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors text-[13px] font-medium"
+            >
+              <span className="material-symbols-outlined text-[16px]">content_copy</span>
+              Copy All
+            </button>
+            <button
+              onClick={() => setShowCustomizer((v) => !v)}
+              title="Customize columns"
+              className={`ml-1 flex h-6 w-6 items-center justify-center rounded transition-colors ${showCustomizer ? "text-[#EA580C]" : "text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"}`}
+            >
+              <span className="material-symbols-outlined text-[16px]">view_column</span>
+            </button>
+
+            {/* Customize popup */}
+            {showCustomizer && (
+              <ColumnCustomizer
+                columns={columns}
+                includeHeaders={includeHeaders}
+                onColumnsChange={setColumns}
+                onIncludeHeadersChange={setIncludeHeaders}
+                onClose={() => setShowCustomizer(false)}
+              />
+            )}
+          </div>
 
           {/* Copy Popup */}
           {showCopyPopup && (
-            <div className="absolute -top-10 right-14 bg-zinc-800 text-white text-[11px] px-3 py-1.5 rounded-md shadow-lg">
+            <div className="absolute -top-10 right-0 bg-zinc-800 text-white text-[11px] px-3 py-1.5 rounded-md shadow-lg whitespace-nowrap">
               Copied to clipboard!
               <div className="absolute -bottom-1 right-8 w-2 h-2 bg-zinc-800 rotate-45" />
             </div>
