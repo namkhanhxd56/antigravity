@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCuratorMode } from "../lib/ModeContext";
+import { getCuratorModel } from "../lib/client-storage";
 
 export const GEMINI_MODELS = [
   { value: "gemini-2.0-flash", label: "Gemini 2.0 Flash (Recommended)" },
@@ -11,6 +12,10 @@ export const GEMINI_MODELS = [
 ] as const;
 
 export type GeminiModel = (typeof GEMINI_MODELS)[number]["value"];
+
+export function getStoredModel(): GeminiModel {
+  return (getCuratorModel() as GeminiModel) || "gemini-2.0-flash";
+}
 
 export default function ContentCuratorNav() {
   const { mode, setMode } = useCuratorMode();
