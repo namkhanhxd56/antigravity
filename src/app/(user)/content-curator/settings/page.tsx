@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { getCuratorModel, setCuratorModel } from "../lib/client-storage";
 import { useContentLimits, type ContentLimits } from "../lib/useContentLimits";
+import { useTheme } from "next-themes";
+import { GEMINI_MODELS, type GeminiModel } from "../components/ContentCuratorNav";
 
 interface ProviderInfo {
   key: string;
@@ -79,6 +81,10 @@ export default function CuratorSettingsPage() {
     // Load local model preference
     setSelectedModel(getCuratorModel());
   }, []);
+
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   const handleSaveModel = (model: string) => {
     setSelectedModel(model);
@@ -216,30 +222,58 @@ export default function CuratorSettingsPage() {
           </div>
         )}
 
+        {/* Appearance Card */}
+        <div className="bg-white dark:bg-zinc-900 rounded-xl border border-slate-300 dark:border-zinc-800 shadow-sm p-6">
+          <h3 className="font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+            <span className="material-symbols-outlined text-primary">palette</span>
+            Appearance
+          </h3>
+          <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-zinc-800/50 rounded-xl border border-slate-200 dark:border-zinc-700">
+            <div>
+              <div className="font-bold text-slate-900 dark:text-white">Dark Mode</div>
+              <div className="text-xs text-slate-500 text-pretty">Toggle between light and dark theme for the interface</div>
+            </div>
+            {mounted && (
+              <button
+                role="switch"
+                aria-checked={theme === "dark"}
+                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${theme === "dark" ? "bg-primary" : "bg-slate-300"}`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${theme === "dark" ? "translate-x-6" : "translate-x-1"}`}
+                />
+              </button>
+            )}
+          </div>
+        </div>
+
         {/* Model Selection Card */}
         <div className="bg-white dark:bg-zinc-900 rounded-xl border border-slate-300 dark:border-zinc-800 shadow-sm p-6">
           <h3 className="font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
             <span className="material-symbols-outlined text-primary">psychology</span>
             Preferred AI Model
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {[
-              { id: "gemini-2.0-flash-exp", name: "Gemini 2.0 Flash", desc: "Fastest & Latest" },
-              { id: "gemini-1.5-pro", name: "Gemini 1.5 Pro", desc: "High reasoning" },
-            ].map((model) => (
-              <button
-                key={model.id}
-                onClick={() => handleSaveModel(model.id)}
-                className={`text-left p-4 rounded-xl border-2 transition-all ${
-                  selectedModel === model.id
-                    ? "border-primary bg-primary/5"
-                    : "border-slate-200 dark:border-zinc-800 hover:border-slate-300"
-                }`}
+          <div className="space-y-4">
+            <div className="relative">
+              <select
+                value={selectedModel}
+                onChange={(e) => handleSaveModel(e.target.value)}
+                className="w-full bg-slate-50 dark:bg-zinc-800 border-2 border-slate-200 dark:border-zinc-700 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 dark:text-white outline-none focus:border-primary transition-all appearance-none cursor-pointer"
               >
-                <div className="font-bold text-slate-900 dark:text-white">{model.name}</div>
-                <div className="text-xs text-slate-500">{model.desc}</div>
-              </button>
-            ))}
+                {GEMINI_MODELS.map((m) => (
+                  <option key={m.value} value={m.value} className="bg-white dark:bg-zinc-900">
+                    {m.label}
+                  </option>
+                ))}
+              </select>
+              <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                unfold_more
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 px-1 italic">
+              Changes reflect across all AI generation and rewriting features.
+            </p>
           </div>
         </div>
 
