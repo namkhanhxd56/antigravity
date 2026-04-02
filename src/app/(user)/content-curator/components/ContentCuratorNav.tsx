@@ -7,10 +7,11 @@ import { getCuratorModel } from "../lib/client-storage";
 import SettingsPanel from "./SettingsPanel";
 
 export const GEMINI_MODELS = [
-  { value: "gemini-2.0-flash", label: "Gemini 2.0 Flash (Fastest)" },
-  { value: "gemini-2.0-flash-lite-preview-02-05", label: "Gemini 2.0 Flash-Lite (New)" },
-  { value: "gemini-1.5-flash", label: "Gemini 1.5 Flash" },
-  { value: "gemini-1.5-pro", label: "Gemini 1.5 Pro (Brain)" },
+  { value: "gemini-2.5-flash-lite", label: "Gemini 2.5 Flash-Lite (Newest)" },
+  { value: "gemini-2.0-flash-exp", label: "Gemini 2.0 Flash (Experimental)" },
+  { value: "gemini-2.0-flash-thinking-exp", label: "Gemini 2.0 Thinking (Experimental)" },
+  { value: "gemini-1.5-flash", label: "Gemini 1.5 Flash (Legacy)" },
+  { value: "gemini-1.5-pro", label: "Gemini 1.5 Pro" },
   { value: "gemini-2.0-pro-exp-02-05", label: "Gemini 2.0 Pro Experimental" },
 ] as const;
 
