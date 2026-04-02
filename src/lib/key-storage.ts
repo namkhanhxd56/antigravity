@@ -18,7 +18,11 @@ export type ProviderKey =
   | "GEMINI_API_KEY"
   | "IDEOGRAM_API_KEY"
   | "OPENAI_API_KEY"
-  | "VERTEX_AI_JSON";
+  | "VERTEX_AI_JSON"
+  | "STICKER_GEMINI_API_KEY"
+  | "STICKER_VERTEX_AI_JSON"
+  | "CURATOR_GEMINI_API_KEY"
+  | "CURATOR_VERTEX_AI_JSON";
 
 /** Shape of the stored keys file. */
 export type StoredKeys = Partial<Record<ProviderKey, string>>;
@@ -100,6 +104,10 @@ export function getKeyStatus(): Record<
     IDEOGRAM_API_KEY: check("IDEOGRAM_API_KEY"),
     OPENAI_API_KEY: check("OPENAI_API_KEY"),
     VERTEX_AI_JSON: check("VERTEX_AI_JSON"),
+    STICKER_GEMINI_API_KEY: check("STICKER_GEMINI_API_KEY"),
+    STICKER_VERTEX_AI_JSON: check("STICKER_VERTEX_AI_JSON"),
+    CURATOR_GEMINI_API_KEY: check("CURATOR_GEMINI_API_KEY"),
+    CURATOR_VERTEX_AI_JSON: check("CURATOR_VERTEX_AI_JSON"),
   };
 }
 

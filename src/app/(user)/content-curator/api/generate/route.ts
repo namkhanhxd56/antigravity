@@ -101,7 +101,9 @@ export async function POST(request: NextRequest) {
     }
 
     const apiKey =
-      request.headers.get("x-gemini-api-key") || process.env.GEMINI_API_KEY;
+      request.headers.get("x-gemini-api-key") || 
+      process.env.CURATOR_GEMINI_API_KEY || 
+      process.env.GEMINI_API_KEY;
 
     if (!apiKey) {
       return NextResponse.json(

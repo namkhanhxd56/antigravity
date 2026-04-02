@@ -18,6 +18,10 @@ const VALID_KEYS: ProviderKey[] = [
   "IDEOGRAM_API_KEY",
   "OPENAI_API_KEY",
   "VERTEX_AI_JSON",
+  "STICKER_GEMINI_API_KEY",
+  "STICKER_VERTEX_AI_JSON",
+  "CURATOR_GEMINI_API_KEY",
+  "CURATOR_VERTEX_AI_JSON",
 ];
 
 export async function GET() {

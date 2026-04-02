@@ -143,14 +143,15 @@ export function suggestModel(
  * Selection Logic: Prefer Vertex AI if available, else Gemini API.
  */
 function getPreferredProvider() {
-  const isVertex = !!resolveApiKey("VERTEX_AI_JSON");
+  const isVertex = !!(resolveApiKey("STICKER_VERTEX_AI_JSON" as any) || resolveApiKey("VERTEX_AI_JSON"));
   return isVertex ? vertexProvider : geminiProvider;
 }
 
 function getProviderKey(providerName: string): string | undefined {
-  return providerName === "Vertex AI"
-    ? resolveApiKey("VERTEX_AI_JSON")
-    : resolveApiKey("GEMINI_API_KEY");
+  if (providerName === "Vertex AI") {
+    return resolveApiKey("STICKER_VERTEX_AI_JSON" as any) || resolveApiKey("VERTEX_AI_JSON");
+  }
+  return resolveApiKey("STICKER_GEMINI_API_KEY" as any) || resolveApiKey("GEMINI_API_KEY");
 }
 
 export async function routeAnalysis(

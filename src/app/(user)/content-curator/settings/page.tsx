@@ -15,7 +15,7 @@ interface ProviderInfo {
 
 const PROVIDERS: ProviderInfo[] = [
   {
-    key: "GEMINI_API_KEY",
+    key: "CURATOR_GEMINI_API_KEY",
     name: "Google Gemini (AI Studio)",
     icon: "diamond",
     description: "Powers Amazon product analysis and content generation",
@@ -23,7 +23,7 @@ const PROVIDERS: ProviderInfo[] = [
     placeholder: "AIzaSy...",
   },
   {
-    key: "VERTEX_AI_JSON",
+    key: "CURATOR_VERTEX_AI_JSON",
     name: "Vertex AI (GCP)",
     icon: "cloud",
     description: "Enterprise access via Service Account JSON",
