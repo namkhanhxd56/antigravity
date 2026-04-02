@@ -198,17 +198,47 @@ export default function ContentCuratorNav() {
           </button>
         </div>
 
-        <div className="flex items-center gap-1 text-zinc-400 dark:text-zinc-500">
-          <Link
-            href="/content-curator/settings"
-            title="Settings"
-            className="flex h-9 w-9 items-center justify-center rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors"
-          >
-            <span className="material-symbols-outlined text-[22px]">settings</span>
-          </Link>
-          <button className="flex h-9 w-9 items-center justify-center rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors">
-            <span className="material-symbols-outlined text-[22px]">account_circle</span>
-          </button>
+        <div className="flex items-center gap-4 border-l border-zinc-200 dark:border-zinc-800 pl-6 ml-2">
+          {/* Model Selection Dropdown */}
+          <div className="relative group">
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-lg border border-zinc-200 dark:border-zinc-700 cursor-pointer hover:border-primary transition-colors">
+              <span className="material-symbols-outlined text-[18px] text-primary">psychology</span>
+              <select
+                value={model}
+                onChange={(e) => handleModelChange(e.target.value as GeminiModel)}
+                className="bg-transparent text-[13px] font-bold text-zinc-700 dark:text-zinc-200 outline-none cursor-pointer appearance-none pr-4"
+              >
+                {GEMINI_MODELS.map((m) => (
+                  <option key={m.value} value={m.value} className="bg-white dark:bg-zinc-900">
+                    {m.label}
+                  </option>
+                ))}
+              </select>
+              <span className="material-symbols-outlined text-[16px] absolute right-2 pointer-events-none text-zinc-400">
+                expand_more
+              </span>
+            </div>
+          </div>
+
+          {/* Dark Mode Toggle */}
+          {mounted && (
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-[20px] text-zinc-400">
+                {theme === "dark" ? "dark_mode" : "light_mode"}
+              </span>
+              <Toggle checked={theme === "dark"} onChange={handleDarkMode} />
+            </div>
+          )}
+
+          <div className="flex items-center gap-1 text-zinc-400 dark:text-zinc-500">
+            <Link
+              href="/content-curator/settings"
+              title="Settings"
+              className="flex h-9 w-9 items-center justify-center rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors"
+            >
+              <span className="material-symbols-outlined text-[22px]">settings</span>
+            </Link>
+          </div>
         </div>
       </div>
     </header>
