@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { getCuratorModel, setCuratorModel } from "../lib/client-storage";
+import { useContentLimits, type ContentLimits } from "../lib/useContentLimits";
 
 interface ProviderInfo {
   key: string;
@@ -47,6 +48,24 @@ export default function CuratorSettingsPage() {
     type: "success" | "error";
     text: string;
   } | null>(null);
+
+  const { limits, save: saveLimits } = useContentLimits();
+  const [draftRaw, setDraftRaw] = useState<Record<keyof ContentLimits, string>>({
+    title: String(limits.title),
+    bulletItem: String(limits.bulletItem),
+    description: String(limits.description),
+    searchTerms: String(limits.searchTerms),
+  });
+
+  // Sync draftRaw whenever limits load/change
+  useEffect(() => {
+    setDraftRaw({
+      title: String(limits.title),
+      bulletItem: String(limits.bulletItem),
+      description: String(limits.description),
+      searchTerms: String(limits.searchTerms),
+    });
+  }, [limits]);
 
   useEffect(() => {
     // Load key status from server
@@ -130,6 +149,29 @@ export default function CuratorSettingsPage() {
     }
   }, []);
 
+  const handleLimitChange = (field: keyof ContentLimits, raw: string) => {
+    setDraftRaw((prev) => ({ ...prev, [field]: raw }));
+  };
+
+  const handleSaveLimits = () => {
+    const next: ContentLimits = {
+      title: parseInt(draftRaw.title, 10) || 200,
+      bulletItem: parseInt(draftRaw.bulletItem, 10) || 500,
+      description: parseInt(draftRaw.description, 10) || 2000,
+      searchTerms: parseInt(draftRaw.searchTerms, 10) || 250,
+    };
+    saveLimits(next);
+    setMessage({ type: "success", text: "Content limits saved successfully!" });
+    setTimeout(() => setMessage(null), 3000);
+  };
+
+  const handleResetLimits = () => {
+    const defaults = { title: 200, bulletItem: 500, description: 2000, searchTerms: 250 };
+    saveLimits(defaults);
+    setMessage({ type: "success", text: "Content limits reset to defaults." });
+    setTimeout(() => setMessage(null), 3000);
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-zinc-950">
       {/* Header */}
@@ -198,6 +240,57 @@ export default function CuratorSettingsPage() {
                 <div className="text-xs text-slate-500">{model.desc}</div>
               </button>
             ))}
+          </div>
+        </div>
+
+        {/* Content Limits Card */}
+        <div className="bg-white dark:bg-zinc-900 rounded-xl border border-slate-300 dark:border-zinc-800 shadow-sm p-6">
+          <h3 className="font-bold text-slate-900 dark:text-white mb-4 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-primary">straighten</span>
+              Content Limits (Chars)
+            </div>
+            <button
+              onClick={handleResetLimits}
+              className="text-xs font-semibold text-slate-400 hover:text-primary transition-colors"
+            >
+              Reset to Defaults
+            </button>
+          </h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {(
+              [
+                { key: "title", label: "Product Title", desc: "Max length for the main title" },
+                { key: "bulletItem", label: "Bullet Point", desc: "Max length for each feature bullet" },
+                { key: "description", label: "Description", desc: "Max length for product description" },
+                { key: "searchTerms", label: "Search Terms", desc: "Max length for backend keywords" },
+              ] as const
+            ).map(({ key, label, desc }) => (
+              <div key={key} className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-bold text-slate-700 dark:text-zinc-300">{label}</label>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{key}</span>
+                </div>
+                <input
+                  type="number"
+                  value={draftRaw[key]}
+                  onChange={(e) => handleLimitChange(key, e.target.value)}
+                  className="w-full bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded-lg px-4 py-2.5 text-sm font-bold text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+                />
+                <p className="text-[11px] text-slate-400">{desc}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-6 flex justify-end">
+            <button
+              onClick={handleSaveLimits}
+              className="bg-primary hover:bg-primary/90 text-white px-6 py-2.5 rounded-lg text-sm font-bold transition-all shadow-lg shadow-primary/20 flex items-center gap-2"
+            >
+              <span className="material-symbols-outlined text-sm">save</span>
+              Save Limits
+            </button>
           </div>
         </div>
 
