@@ -7,7 +7,7 @@ import AnalyticsPanel from "./components/AnalyticsPanel";
 import ResultGrid from "./components/ResultGrid";
 import { STICKER_MASTER_RULES } from "./lib/rules";
 import { fileToBase64 } from "@/lib/utils";
-import { getStoredApiKey } from "@/lib/client-key-storage";
+import { getStoredApiKey } from "./lib/client-storage";
 import type {
   StickerFormState,
   StickerResult,

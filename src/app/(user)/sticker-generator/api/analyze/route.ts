@@ -6,7 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { analyzeSticker } from "../../services/gemini.service";
+import { routeAnalysis } from "../../services/router.service";
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
 
     const apiKey = request.headers.get("x-gemini-api-key") || undefined;
 
-    const analysis = await analyzeSticker(
+    const analysis = await routeAnalysis(
       imageBase64,
       mimeType || "image/png",
       apiKey

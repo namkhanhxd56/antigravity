@@ -49,6 +49,18 @@ const modules = [
       "from-orange-50 to-rose-50 dark:from-orange-950/40 dark:to-rose-950/40",
     borderColor: "border-orange-200 dark:border-orange-800",
   },
+  {
+    title: "FBA Label Tool",
+    description:
+      "Upload FBA barcode PDF, add custom text, convert to PNG images, and download as a ZIP file.",
+    href: "/fba-label",
+    emoji: "🏷️",
+    status: "Active" as const,
+    gradient: "from-sky-500 to-cyan-500",
+    bgGradient:
+      "from-sky-50 to-cyan-50 dark:from-sky-950/40 dark:to-cyan-950/40",
+    borderColor: "border-sky-200 dark:border-sky-800",
+  },
 ];
 
 export default function Home() {

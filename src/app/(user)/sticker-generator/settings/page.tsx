@@ -17,9 +17,17 @@ const PROVIDERS: ProviderInfo[] = [
     key: "GEMINI_API_KEY",
     name: "Google Gemini",
     icon: "diamond",
-    description: "Powers sticker analysis and generation via Gemini 3 Flash Image",
+    description: "Powers sticker analysis and generation via Gemini Flash Image",
     docsUrl: "https://aistudio.google.com/apikey",
     placeholder: "AIzaSy...",
+  },
+  {
+    key: "VERTEX_AI_JSON",
+    name: "Vertex AI (GCP)",
+    icon: "cloud",
+    description: "Enterprise access via Service Account JSON content",
+    docsUrl: "https://console.cloud.google.com/vertex-ai",
+    placeholder: '{ "type": "service_account", ... }',
   },
   {
     key: "IDEOGRAM_API_KEY",
@@ -45,7 +53,7 @@ interface KeyStatus {
   preview: string;
 }
 
-export default function SettingsPage() {
+export default function StickerSettingsPage() {
   const [keyStatus, setKeyStatus] = useState<Record<string, KeyStatus>>({});
   const [inputs, setInputs] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState<string | null>(null);
@@ -54,7 +62,6 @@ export default function SettingsPage() {
     text: string;
   } | null>(null);
 
-  // Fetch key status on mount
   useEffect(() => {
     fetch("/api/settings")
       .then((res) => res.json())
@@ -143,10 +150,10 @@ export default function SettingsPage() {
                 <span className="material-symbols-outlined text-primary">
                   key
                 </span>
-                API Key Settings
+                Sticker Generator — API Keys
               </h1>
               <p className="text-sm text-slate-500">
-                Manage your AI provider API keys
+                Manage AI provider keys for Sticker Generator
               </p>
             </div>
           </div>

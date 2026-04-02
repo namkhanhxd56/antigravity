@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<style>
+  body { font-family: "Helvetica Neue", Arial, sans-serif; font-size: 13pt; color: #1a1a1a; max-width: 820px; margin: 40px auto; line-height: 1.7; }
+  h1 { font-size: 24pt; color: #EA580C; border-bottom: 3px solid #EA580C; padding-bottom: 8px; margin-top: 0; }
+  h2 { font-size: 16pt; color: #1a1a1a; border-bottom: 1px solid #e0e0e0; padding-bottom: 4px; margin-top: 36px; }
+  h3 { font-size: 13pt; color: #EA580C; margin-top: 24px; }
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 12pt; }
+  th { background: #EA580C; color: white; padding: 8px 12px; text-align: left; }
+  td { border: 1px solid #e0e0e0; padding: 8px 12px; vertical-align: top; }
+  tr:nth-child(even) td { background: #fafafa; }
+  pre, code { background: #f5f5f5; border-radius: 4px; font-family: "Courier New", monospace; font-size: 11pt; }
+  pre { padding: 14px 16px; border-left: 4px solid #EA580C; overflow-x: auto; white-space: pre-wrap; }
+  code { padding: 1px 5px; }
+  ul, ol { padding-left: 24px; margin: 8px 0; }
+  li { margin: 4px 0; }
+  blockquote { border-left: 4px solid #EA580C; margin: 16px 0; padding: 10px 16px; background: #fff7ed; color: #92400e; border-radius: 0 6px 6px 0; }
+  .badge { display: inline-block; background: #EA580C; color: white; padding: 2px 10px; border-radius: 20px; font-size: 10pt; font-weight: bold; }
+  .flow { background: #f5f5f5; border-left: 4px solid #EA580C; padding: 14px 16px; font-family: "Courier New", monospace; font-size: 11pt; white-space: pre; }
+  .section-note { background: #fff7ed; border: 1px solid #fdba74; padding: 10px 14px; border-radius: 6px; margin: 12px 0; font-size: 11.5pt; }
+  hr { border: none; border-top: 1px solid #e0e0e0; margin: 32px 0; }
+</style>
+</head>
+<body>
+
+<h1>AMZ Content Curator — Hướng dẫn sử dụng</h1>
+<p style="color:#666; font-size:11pt;">Phiên bản nội bộ · Antigravity Studio · 2025</p>
+
+<h2>Tổng quan</h2>
+<p>AMZ Content Curator là công cụ AI giúp viết Amazon listing (Title, Bullet Points, Description, Search Terms) từ danh sách keyword. Chất lượng output phụ thuộc chủ yếu vào <strong>Skill</strong> bạn chọn và <strong>Keyword Bank</strong> bạn cung cấp.</p>
+
+<h2>Luồng làm việc chuẩn</h2>
+<div class="flow">1. Chuẩn bị Keyword Bank
+       ↓
+2. Chọn / tạo Skill phù hợp với sản phẩm
+       ↓
+3. (Tuỳ chọn) Upload ảnh sản phẩm
+       ↓
+4. (Tuỳ chọn) Thêm Notes, chọn Occasion
+       ↓
+5. Generate content
+       ↓
+6. Review + Rewrite từng section nếu cần
+       ↓
+7. So sánh với Competitor
+       ↓
+8. Export → paste vào Google Sheets</div>
+
+<hr>
+
+<h2>1. Keyword Bank</h2>
+
+<h3>Định dạng nhập</h3>
+<pre>hiking boots waterproof men 45000
+trail running shoes 32000
+ankle support boots -
+lightweight hiking footwear</pre>
+<ul>
+  <li>Mỗi dòng = 1 keyword</li>
+  <li>Số cuối dòng = search volume (tùy chọn, dùng để sắp xếu ưu tiên)</li>
+  <li>Dấu <code>-</code> = không có volume</li>
+  <li>Có thể paste trực tiếp từ Helium 10 / Cerebro (công cụ tự parse)</li>
+</ul>
+
+<h3>Nguyên tắc quan trọng</h3>
+<ul>
+  <li>Keyword <strong>đầu tiên</strong> trong danh sách = quan trọng nhất → AI sẽ đặt ở <strong>đầu Title</strong></li>
+  <li>Keyword đã xuất hiện ở Title → không nên lặp lại ở Description</li>
+  <li>Amazon index xuyên suốt tất cả các trường — không cần nhồi keyword nhiều lần</li>
+</ul>
+
+<h3>Chỉ số Suggested Intensity</h3>
+<table>
+  <tr><th>Số keyword</th><th>Mức</th><th>Ý nghĩa</th></tr>
+  <tr><td>&lt; 15</td><td>LOW</td><td>Ít nguyên liệu, AI sẽ lặp từ</td></tr>
+  <tr><td>15–29</td><td>MEDIUM</td><td>Đủ dùng cho listing thông thường</td></tr>
+  <tr><td>≥ 30</td><td>HIGH</td><td>Tốt nhất, AI có nhiều lựa chọn</td></tr>
+</table>
+
+<hr>
+
+<h2>2. Skill — Phần quan trọng nhất</h2>
+<p>Skill là file <code>.md</code> định nghĩa <strong>giọng văn, cấu trúc, và quy tắc viết</strong> cho từng loại sản phẩm/thương hiệu. AI đọc Skill trước khi viết bất cứ điều gì.</p>
+
+<h3>Skill có sẵn</h3>
+<table>
+  <tr><th>Skill</th><th>Dùng khi nào</th></tr>
+  <tr>
+    <td><strong>Editorial Pro V2</strong></td>
+    <td>Sản phẩm phổ thông, cần tone chuyên nghiệp, không hype. Title 140–180 ký tự, bullet 180–240.</td>
+  </tr>
+  <tr>
+    <td><strong>Luxury Brand</strong></td>
+    <td>Sản phẩm cao cấp, thủ công, premium. Dùng ngôn ngữ tinh tế, nhấn vật liệu và craftsmanship. Tuyệt đối không dùng từ giảm giá.</td>
+  </tr>
+  <tr>
+    <td><strong>Budget Friendly</strong></td>
+    <td>Sản phẩm giá tốt, value. Tone thực tế, nêu specs cụ thể, giải quyết objection về chất lượng.</td>
+  </tr>
+</table>
+
+<h3>Cách chọn Skill đúng</h3>
+<pre>Sản phẩm premium / gift   → Luxury Brand
+Sản phẩm everyday / mid   → Editorial Pro V2
+Sản phẩm giá rẻ / combo   → Budget Friendly</pre>
+
+<h3>Cách tạo Skill của riêng bạn</h3>
+<p>Skill là file <code>.md</code> — bạn kiểm soát 100% cách AI viết. Cấu trúc chuẩn:</p>
+<pre># Tên Skill — Amazon Listing Skill
+
+## Voice &amp; Tone
+[Mô tả giọng văn, đối tượng khách hàng, điều cần tránh]
+
+## Title Rules
+- [Quy tắc cụ thể cho Title]
+- Target X–Y characters
+
+## Bullet Rules
+- [Cấu trúc mỗi bullet]
+- X–Y characters per bullet
+
+## Description Rules
+- [Cấu trúc đoạn văn]
+- X–Y characters
+
+## Search Terms Rules
+- [Quy tắc chọn từ]
+- Lowercase, space-separated, max 250 characters</pre>
+
+<p><strong>Sau khi tạo xong:</strong> Import file <code>.md</code> vào tool bằng nút <strong>Import .md skill file</strong> trong panel trái.</p>
+
+<blockquote>
+  <strong>Lưu ý quan trọng:</strong> Sau khi upload skill mới hoặc chỉnh sửa file skill trên disk, bấm nút <strong>Refresh ⟳</strong> cạnh dropdown Skill để xóa cache — đảm bảo AI đọc phiên bản mới nhất.
+</blockquote>
+
+<h3>Những lỗi thường gặp khi viết Skill</h3>
+<table>
+  <tr><th>Lỗi</th><th>Hậu quả</th><th>Cách fix</th></tr>
+  <tr>
+    <td>Quy tắc quá chung chung<br><em>"write professionally"</em></td>
+    <td>AI viết đúng nhưng không có bản sắc</td>
+    <td>Cụ thể hóa: <em>"open each bullet with a measurable outcome, then the specific feature"</em></td>
+  </tr>
+  <tr>
+    <td>Nội dung bị duplicate trong file</td>
+    <td>AI bị confused, lặp cấu trúc</td>
+    <td>Dùng Inspect Prompt để phát hiện và xóa dòng trùng</td>
+  </tr>
+  <tr>
+    <td>Quên Refresh sau khi sửa</td>
+    <td>AI vẫn dùng Skill cũ từ cache</td>
+    <td>Bấm ⟳ mỗi khi chỉnh file</td>
+  </tr>
+</table>
+
+<hr>
+
+<h2>3. Customization</h2>
+
+<h3>Notes</h3>
+<p>Thêm context mà keyword không thể diễn đạt:</p>
+<pre>Target audience: outdoor enthusiasts 30–45 tuổi
+Highlight: đế Vibram, chống thấm Gore-Tex
+Avoid: từ "cheap", "affordable"</pre>
+
+<h3>Occasion</h3>
+<p>Bật khi listing cần điều chỉnh cho chiến dịch cụ thể. AI sẽ điều chỉnh urgency language và gift-angle phù hợp.</p>
+<table>
+  <tr><th>Occasion</th><th>Điều AI thay đổi</th></tr>
+  <tr><td>Holiday Q4</td><td>Thêm gift-giving language, urgency nhẹ</td></tr>
+  <tr><td>Prime Day</td><td>Nhấn value, deal angle</td></tr>
+  <tr><td>Valentine's</td><td>Romantic framing, gift occasion</td></tr>
+  <tr><td>Back to school</td><td>Practical, functional framing</td></tr>
+</table>
+
+<h3>Product Image</h3>
+<p>Upload ảnh sản phẩm để AI phân tích màu sắc, vật liệu, đặc điểm nhìn thấy — đặc biệt hữu ích khi keyword chưa mô tả hết sản phẩm.</p>
+
+<hr>
+
+<h2>4. Generate &amp; Review</h2>
+
+<h3>Character limits mặc định</h3>
+<table>
+  <tr><th>Section</th><th>Giới hạn</th><th>Ghi chú</th></tr>
+  <tr><td>Title</td><td>200 ký tự</td><td>Keyword quan trọng nhất ở đầu</td></tr>
+  <tr><td>Mỗi Bullet</td><td>500 ký tự</td><td>Tối thiểu 5, tối đa 10 bullets</td></tr>
+  <tr><td>Description</td><td>2000 ký tự</td><td>Không lặp nội dung từ bullets</td></tr>
+  <tr><td>Search Terms</td><td>250 ký tự</td><td>Chỉ keyword chưa có trong title/bullets</td></tr>
+</table>
+<div class="section-note">Giới hạn có thể chỉnh trong <strong>Settings ⚙</strong> → Content Limits.</div>
+
+<p><strong>Keyword highlight:</strong> Từ nào trong Keyword Bank xuất hiện trong nội dung sẽ được tô cam — giúp kiểm tra coverage nhanh bằng mắt.</p>
+
+<hr>
+
+<h2>5. Rewrite từng section</h2>
+<p>Mỗi section có icon ✨ — click để mở Rewrite Bar:</p>
+<pre>[ Describe changes...                    ]  [ ↺ Regen ]</pre>
+
+<h3>Ví dụ instruction hiệu quả</h3>
+<table>
+  <tr><th>Mục tiêu</th><th>Instruction mẫu</th></tr>
+  <tr><td>Rút ngắn</td><td><em>shorten to under 180 chars, keep the keyword "waterproof"</em></td></tr>
+  <tr><td>Đổi tone</td><td><em>make the opening more action-oriented</em></td></tr>
+  <tr><td>Thêm keyword</td><td><em>add the word "lightweight" naturally</em></td></tr>
+  <tr><td>Đổi đối tượng</td><td><em>rewrite for a female audience</em></td></tr>
+  <tr><td>Tăng tính chuyên nghiệp</td><td><em>the tone is too casual, make it more professional</em></td></tr>
+</table>
+
+<blockquote>
+  Rewrite <strong>không dùng Skill</strong> — AI chỉ đọc nội dung hiện tại + instruction + giới hạn ký tự. Điều này cho phép fine-tune nhanh mà không bị ràng buộc bởi toàn bộ style guide.
+</blockquote>
+
+<hr>
+
+<h2>6. Competitor</h2>
+<p>Dùng tab <strong>Competitor</strong> để so sánh Title của bạn với đối thủ:</p>
+<ul>
+  <li><strong>MY TITLE</strong> lấy tự động từ content đang có ở Create My Content</li>
+  <li>Paste title đối thủ vào các ô bên dưới (tối đa 10)</li>
+  <li>Keyword highlight giống nhau — dễ nhận ra đối thủ đang dùng keyword nào của bạn</li>
+  <li>Thanh tiến độ <code>X/Y keywords</code> cho biết mức độ keyword overlap</li>
+</ul>
+<div class="section-note">Đây là chức năng so sánh thuần túy — không có AI action nào ở bước này.</div>
+
+<hr>
+
+<h2>7. Export</h2>
+<p><strong>Copy All</strong> → paste thẳng vào Google Sheets / Excel thành 1 hàng, mỗi section = 1 cột. Nội dung có xuống hàng (như Description) sẽ nằm đúng trong 1 ô, không nhảy hàng.</p>
+
+<h3>Customize Columns</h3>
+<p>Icon ⧉ cạnh Copy All:</p>
+<ul>
+  <li>Kéo thả để đổi thứ tự cột</li>
+  <li>Thêm <strong>ô trống (spacer)</strong> để phân cách cột trong Sheets</li>
+  <li>Tích <strong>Include column headers</strong> nếu muốn paste kèm tên cột ở row đầu</li>
+</ul>
+
+<p><strong>Default column order:</strong></p>
+<pre>Title | Bullet 1 | Bullet 2 | Bullet 3 | Bullet 4 | Bullet 5 | Description | Generic Keywords</pre>
+
+<hr>
+
+<h2>Mẹo sử dụng hiệu quả</h2>
+
+<h3>Về Skill</h3>
+<ul>
+  <li>Một Skill tốt: <strong>cụ thể hơn chung chung</strong>. Thay vì <em>"write professionally"</em>, hãy viết <em>"open each bullet with a measurable outcome, followed by the specific feature that enables it"</em>.</li>
+  <li>Nếu output liên tục sai tone → vấn đề thường nằm ở Skill. Chỉnh Skill, bấm Refresh ⟳, Generate lại.</li>
+  <li>Tạo Skill riêng cho từng ngách sản phẩm thay vì dùng chung 1 Skill cho tất cả.</li>
+  <li>File <code>base_rules.md</code> áp dụng cho <strong>mọi</strong> Skill — đặt các nguyên tắc Amazon cốt lõi ở đây.</li>
+</ul>
+
+<h3>Về Keyword Bank</h3>
+<ul>
+  <li>Sắp xếp keyword theo <strong>priority từ cao xuống thấp</strong> — keyword đầu tiên sẽ vào đầu Title.</li>
+  <li>Nên có 20–40 keyword để AI có đủ lựa chọn mà không bị nhồi.</li>
+  <li>Sau khi generate, dùng nút <strong>↺</strong> ở Generic Search Keywords để tự động điền các keyword chưa xuất hiện trong content.</li>
+</ul>
+
+<h3>Về Rewrite</h3>
+<ul>
+  <li>Generate toàn bộ trước, rewrite sau — không nên rewrite khi content chưa có gì.</li>
+  <li>Instruction <strong>ngắn gọn, 1 yêu cầu cụ thể</strong> = 1 lần regen tốt hơn nhiều yêu cầu cùng lúc.</li>
+  <li>Rewrite bar giữ mở sau khi regen — có thể tinh chỉnh nhiều lần liên tiếp.</li>
+</ul>
+
+</body>
+</html>

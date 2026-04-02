@@ -7,7 +7,7 @@ import { useUndoRedo } from "../lib/useUndoRedo";
 import TextToolbar from "./TextToolbar";
 import HighlightTextarea from "./HighlightTextarea";
 import { useMemo } from "react";
-import { getCuratorApiKey } from "@/lib/client-key-storage";
+import { getCuratorApiKey } from "../lib/client-storage";
 import { getStoredModel } from "./ContentCuratorNav";
 import ColumnCustomizer, { buildDefaultColumns, type Column } from "./ColumnCustomizer";
 
@@ -134,7 +134,6 @@ export default function ContentCanvas({ content, isGenerating, onContentChange, 
   }, [bullets.length]);
 
   const handleCopy = useCallback(() => {
-    // Build a lookup of values by column id
     const getValue = (id: Column["id"]): string => {
       if (id === "title") return title;
       if (id === "description") return description;
@@ -146,13 +145,17 @@ export default function ContentCanvas({ content, isGenerating, onContentChange, 
       return ""; // spacer
     };
 
+    // Wrap cell in quotes and escape internal quotes so newlines
+    // inside description don't break rows in Google Sheets / Excel.
+    const tsvCell = (val: string) => `"${val.replace(/"/g, '""')}"`;
+
     const rows: string[] = [];
 
     if (includeHeaders) {
-      rows.push(columns.map((c) => (c.isSpacer ? "" : c.label)).join("\t"));
+      rows.push(columns.map((c) => tsvCell(c.isSpacer ? "" : c.label)).join("\t"));
     }
 
-    rows.push(columns.map((c) => getValue(c.id)).join("\t"));
+    rows.push(columns.map((c) => tsvCell(getValue(c.id))).join("\t"));
 
     navigator.clipboard.writeText(rows.join("\n"));
     setShowCopyPopup(true);

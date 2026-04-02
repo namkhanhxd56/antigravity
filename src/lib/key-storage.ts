@@ -17,7 +17,8 @@ const KEYS_FILE = path.join(process.cwd(), "data", "api-keys.json");
 export type ProviderKey =
   | "GEMINI_API_KEY"
   | "IDEOGRAM_API_KEY"
-  | "OPENAI_API_KEY";
+  | "OPENAI_API_KEY"
+  | "VERTEX_AI_JSON";
 
 /** Shape of the stored keys file. */
 export type StoredKeys = Partial<Record<ProviderKey, string>>;
@@ -98,6 +99,7 @@ export function getKeyStatus(): Record<
     GEMINI_API_KEY: check("GEMINI_API_KEY"),
     IDEOGRAM_API_KEY: check("IDEOGRAM_API_KEY"),
     OPENAI_API_KEY: check("OPENAI_API_KEY"),
+    VERTEX_AI_JSON: check("VERTEX_AI_JSON"),
   };
 }
 

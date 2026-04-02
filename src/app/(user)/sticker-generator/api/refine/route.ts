@@ -6,7 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { geminiProvider } from "../../services/gemini.service";
+import { routeRefinement } from "../../services/router.service";
 import type { StickerAnalysis } from "../../lib/types";
 
 export async function POST(request: NextRequest) {
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
 
     const apiKey = request.headers.get("x-gemini-api-key") || undefined;
 
-    const refinedAnalysis = await geminiProvider.refineAnalysis(
+    const refinedAnalysis = await routeRefinement(
       currentState,
       modifications,
       apiKey

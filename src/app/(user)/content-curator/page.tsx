@@ -5,7 +5,8 @@ import ProductAsset from "./components/ProductAsset";
 import SkillConfig from "./components/SkillConfig";
 import KeywordBank from "./components/KeywordBank";
 import ContentCanvas from "./components/ContentCanvas";
-import { getCuratorApiKey } from "@/lib/client-key-storage";
+import CompetitorView from "./components/CompetitorView";
+import { getCuratorApiKey } from "./lib/client-storage";
 import { getStoredModel } from "./components/ContentCuratorNav";
 import type { ContentListing } from "./lib/types";
 import { useCuratorMode } from "./lib/ModeContext";
@@ -30,6 +31,7 @@ export default function ContentCuratorPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [liveContentText, setLiveContentText] = useState("");
+  const [liveTitle, setLiveTitle] = useState("");
   // DEV: uncomment khi bật DevInspector
   // const [rawResponse, setRawResponse] = useState<string | undefined>(undefined);
   const { mode } = useCuratorMode();
@@ -119,18 +121,16 @@ export default function ContentCuratorPage() {
             bankKeywords={keywords}
             skillName={selectedSkill}
             onContentChange={(live) => {
+              setLiveTitle(live.title);
               const allText = [live.title, ...live.bullets, live.description, live.searchTerms].join(' ');
               setLiveContentText(allText);
             }}
           />
         ) : (
-          <div className="flex h-full w-full flex-col items-center justify-center p-8 text-center text-zinc-500 dark:text-zinc-400">
-            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
-              <span className="material-symbols-outlined text-[32px]">construction</span>
-            </div>
-            <h3 className="text-[17px] font-semibold mb-2 text-zinc-800 dark:text-zinc-200">🛠 Competitor Mode</h3>
-            <p className="text-[14px]">This feature is currently under development.</p>
-          </div>
+          <CompetitorView
+            myTitle={liveTitle}
+            bankKeywords={keywords}
+          />
         )}
       </div>
     </div>

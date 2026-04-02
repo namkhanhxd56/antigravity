@@ -15,7 +15,11 @@ export interface ExtractedElement {
 // ─── Model Types ─────────────────────────────────────────────────────────────
 
 /** Supported AI model identifiers for sticker generation. */
-export type ModelId = "gemini-flash-image" | "ideogram-2" | "dall-e-3";
+export type ModelId =
+  | "gemini-flash-image"
+  | "vertex-gemini-flash"
+  | "ideogram-2"
+  | "dall-e-3";
 
 /** Configuration for a single AI model. */
 export interface ModelConfig {

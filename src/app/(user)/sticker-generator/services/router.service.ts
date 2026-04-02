@@ -18,16 +18,24 @@ import type {
 } from "../lib/types";
 import { resolveApiKey, type ProviderKey } from "@/lib/key-storage";
 import { geminiProvider } from "./gemini.service";
+import { vertexProvider } from "./vertex.service";
 
 // ─── Model Registry ──────────────────────────────────────────────────────────
 
 const MODEL_REGISTRY: Omit<ModelConfig, "available">[] = [
   {
     id: "gemini-flash-image",
-    name: "Gemini 3 Flash Image",
-    description: "Nano Banana 2 — fast text-to-image & image-to-image",
+    name: "Gemini 1.5 Flash (AI Studio)",
+    description: "Standard API Key access via AI Studio",
     envKey: "GEMINI_API_KEY",
     strengths: ["speed", "multi-image", "default"],
+  },
+  {
+    id: "vertex-gemini-flash",
+    name: "Gemini 1.5 Flash (Vertex AI)",
+    description: "Enterprise access via GCP Service Account",
+    envKey: "VERTEX_AI_JSON",
+    strengths: ["enterprise", "secure", "vertex"],
   },
   {
     id: "ideogram-2",
@@ -132,38 +140,66 @@ export function suggestModel(
 }
 
 /**
- * Routes a generation request to the chosen model's provider.
- * Runs API guard first — returns error if API key is missing.
+ * Selection Logic: Prefer Vertex AI if available, else Gemini API.
  */
+function getPreferredProvider() {
+  const isVertex = !!resolveApiKey("VERTEX_AI_JSON");
+  return isVertex ? vertexProvider : geminiProvider;
+}
+
+function getProviderKey(providerName: string): string | undefined {
+  return providerName === "Vertex AI"
+    ? resolveApiKey("VERTEX_AI_JSON")
+    : resolveApiKey("GEMINI_API_KEY");
+}
+
+export async function routeAnalysis(
+  imageBase64: string,
+  mimeType?: string,
+  clientApiKey?: string
+) {
+  const provider = getPreferredProvider();
+  const key = clientApiKey || getProviderKey(provider.name);
+  return provider.analyzeSticker(imageBase64, mimeType, key);
+}
+
+export async function routeRefinement(
+  currentState: any,
+  modifications: string,
+  clientApiKey?: string
+) {
+  const provider = getPreferredProvider();
+  const key = clientApiKey || getProviderKey(provider.name);
+  return provider.refineAnalysis(currentState, modifications, key);
+}
+
 export async function routeGeneration(
   request: StickerGenerationRequest,
   modelId: ModelId,
   apiKey?: string
 ): Promise<StickerGenerationResponse> {
-  // ── API Guard: check key before calling any provider ──
   const guardResult = guardApiKey(modelId, apiKey);
-  if (guardResult) {
-    return guardResult;
-  }
+  if (guardResult) return guardResult;
 
   switch (modelId) {
+    case "vertex-gemini-flash":
+      return vertexProvider.generateSticker(
+        request,
+        apiKey || resolveApiKey("VERTEX_AI_JSON")
+      );
+
     case "gemini-flash-image":
-      return geminiProvider.generateSticker(request, apiKey);
+      return geminiProvider.generateSticker(
+        request,
+        apiKey || resolveApiKey("GEMINI_API_KEY")
+      );
 
     case "ideogram-2":
-      return {
-        success: false,
-        modelId: "ideogram-2",
-        error:
-          "Ideogram 2.0 generation is not yet implemented. Please select another model.",
-      };
-
     case "dall-e-3":
       return {
         success: false,
-        modelId: "dall-e-3",
-        error:
-          "DALL·E 3 generation is not yet implemented. Please select another model.",
+        modelId,
+        error: `${modelId} generation is not yet implemented.`,
       };
 
     default:
