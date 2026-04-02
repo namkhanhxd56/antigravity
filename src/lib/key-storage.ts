@@ -11,7 +11,10 @@
 import fs from "fs";
 import path from "path";
 
-const KEYS_FILE = path.join(process.cwd(), "data", "api-keys.json");
+const isVercel = process.env.VERCEL === "1" || !!process.env.VERCEL_URL;
+const KEYS_FILE = isVercel 
+  ? path.join("/tmp", "api-keys.json")
+  : path.join(process.cwd(), "data", "api-keys.json");
 
 /** Supported provider key names. */
 export type ProviderKey =
