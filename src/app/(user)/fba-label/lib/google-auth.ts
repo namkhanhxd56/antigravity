@@ -1,15 +1,15 @@
 import fs from "fs";
 import path from "path";
-import { google } from "googleapis";
-import type { OAuth2Client } from "googleapis/build/src/auth/oauth2client";
+import { google, Auth } from "googleapis";
+type OAuth2Client = Auth.OAuth2Client;
 
 const TOKENS_FILE = path.join(process.cwd(), "data", "fba-drive-tokens.json");
 
 export interface DriveTokens {
-  access_token: string;
-  refresh_token: string;
-  expiry_date: number;
-  token_type?: string;
+  access_token?: string | null;
+  refresh_token?: string | null;
+  expiry_date?: number | null;
+  token_type?: string | null;
   scope?: string;
 }
 
@@ -87,7 +87,6 @@ export async function getAuthenticatedClient(): Promise<OAuth2Client | null> {
     const merged: DriveTokens = {
       ...tokens,
       ...newTokens,
-      refresh_token: newTokens.refresh_token ?? tokens.refresh_token,
     };
     writeTokens(merged);
   });

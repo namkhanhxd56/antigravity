@@ -1,6 +1,6 @@
-import { google } from "googleapis";
+import { google, Auth } from "googleapis";
 import { Readable } from "stream";
-import type { OAuth2Client } from "googleapis/build/src/auth/oauth2client";
+type OAuth2Client = Auth.OAuth2Client;
 
 export interface UploadResult {
   fileId: string;

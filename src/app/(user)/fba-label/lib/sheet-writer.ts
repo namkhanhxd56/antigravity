@@ -1,5 +1,5 @@
-import { google } from "googleapis";
-import type { OAuth2Client } from "googleapis/build/src/auth/oauth2client";
+import { google, Auth } from "googleapis";
+type OAuth2Client = Auth.OAuth2Client;
 
 export async function getExistingFnskus(
   auth: OAuth2Client,
