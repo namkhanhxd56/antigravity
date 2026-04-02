@@ -10,10 +10,12 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { VertexAI } from "@google-cloud/vertexai";
 import fs from "fs";
 import path from "path";
 import { buildGeneratePrompt, type LimitsConfig } from "../../lib/promptBuilder";
 import type { GenerateRequest } from "../../lib/types";
+import { readStoredKeys } from "@/lib/key-storage";
 
 const BASE_DIR = path.join(
   process.cwd(), "src", "app", "(user)", "content-curator", "skills", "_base"
@@ -100,16 +102,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const storedKeys = readStoredKeys();
+    const curatorVertexJson = storedKeys.CURATOR_VERTEX_AI_JSON || process.env.CURATOR_VERTEX_AI_JSON;
+    const globalVertexJson = storedKeys.VERTEX_AI_JSON || process.env.VERTEX_AI_JSON;
+    const vertexJson = curatorVertexJson || globalVertexJson;
+
     const apiKey =
       request.headers.get("x-gemini-api-key") || 
+      storedKeys.CURATOR_GEMINI_API_KEY ||
       process.env.CURATOR_GEMINI_API_KEY || 
+      storedKeys.GEMINI_API_KEY ||
       process.env.GEMINI_API_KEY;
 
-    if (!apiKey) {
+    if (!apiKey && !vertexJson) {
       return NextResponse.json(
         {
           success: false,
-          error: "GEMINI_API_KEY is not configured. Add it to .env.local or enter it in Settings.",
+          error: "No API Credentials found. Please configure Gemini API Key or Vertex AI JSON in Settings.",
         },
         { status: 400 }
       );
@@ -124,37 +133,68 @@ export async function POST(request: NextRequest) {
       occasion,
     });
 
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const geminiModel = genAI.getGenerativeModel({
-      model: model || "gemini-2.5-flash-lite",
-      generationConfig: {
-        responseMimeType: "application/json",
-        temperature: 0.75,
-      },
-    });
+    let rawResponse = "";
 
-    const parts: any[] = [{ text: prompt }];
-
-    if (image) {
-      // image is a base64 Data URL (e.g., "data:image/jpeg;base64,...")
-      const mimeMatch = image.match(/^data:(image\/[a-zA-Z0-9]+);base64,/);
-      if (mimeMatch) {
-        const mimeType = mimeMatch[1];
-        const base64Data = image.replace(/^data:image\/[a-zA-Z0-9]+;base64,/, "");
-        // Insert inlineData at the beginning so the AI "sees" the image first
-        parts.unshift({
-          inlineData: {
-            data: base64Data,
-            mimeType,
+    if (vertexJson) {
+      // ─── Vertex AI Strategy ───────────────────────────────────────────────
+      try {
+        const credentials = JSON.parse(vertexJson);
+        const project = credentials.project_id;
+        const vertexAI = new VertexAI({ project, location: "us-central1", googleAuthOptions: { credentials } });
+        
+        const vertexModel = vertexAI.getGenerativeModel({
+          model: model || "gemini-1.5-flash-002",
+          generationConfig: {
+            responseMimeType: "application/json",
+            temperature: 0.75,
           },
         });
+
+        const vParts = [{ text: prompt }];
+        if (image) {
+          const mimeMatch = image.match(/^data:(image\/[a-zA-Z0-9]+);base64,/);
+          if (mimeMatch) {
+            const mimeType = mimeMatch[1];
+            const base64Data = image.replace(/^data:image\/[a-zA-Z0-9]+;base64,/, "");
+            vParts.unshift({ inlineData: { data: base64Data, mimeType } } as any);
+          }
+        }
+
+        const result = await vertexModel.generateContent({
+          contents: [{ role: "user", parts: vParts as any }],
+        });
+        const response = await result.response;
+        rawResponse = response.candidates?.[0]?.content?.parts?.[0]?.text || "";
+      } catch (vErr) {
+        console.error("Vertex AI Error:", vErr);
+        throw new Error(`Vertex AI failed: ${vErr instanceof Error ? vErr.message : "Unknown error"}`);
       }
+    } else {
+      // ─── AI Studio Strategy ───────────────────────────────────────────────
+      const genAI = new GoogleGenerativeAI(apiKey!);
+      const geminiModel = genAI.getGenerativeModel({
+        model: model || "gemini-2.5-flash-lite",
+        generationConfig: {
+          responseMimeType: "application/json",
+          temperature: 0.75,
+        },
+      });
+
+      const aParts: any[] = [{ text: prompt }];
+      if (image) {
+        const mimeMatch = image.match(/^data:(image\/[a-zA-Z0-9]+);base64,/);
+        if (mimeMatch) {
+          const mimeType = mimeMatch[1];
+          const base64Data = image.replace(/^data:image\/[a-zA-Z0-9]+;base64,/, "");
+          aParts.unshift({ inlineData: { data: base64Data, mimeType } });
+        }
+      }
+
+      const result = await geminiModel.generateContent(aParts);
+      rawResponse = result.response.text();
     }
 
-    const result = await geminiModel.generateContent(parts);
-    const raw = result.response.text();
-
-    const cleanJson = raw
+    const cleanJson = rawResponse
       .replace(/```json\s*/gi, "")
       .replace(/```\s*/g, "")
       .trim();
@@ -171,7 +211,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       listing,
-      _debug: { rawResponse: raw },
+      _debug: { rawResponse: rawResponse },
     });
   } catch (error) {
     console.error("[content-curator/generate] error:", error);
