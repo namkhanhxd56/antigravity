@@ -2,6 +2,22 @@
 
 import { useState, useEffect } from "react";
 import { useTheme } from "next-themes";
+import { 
+  getStickerAnalysisModel, setStickerAnalysisModel, 
+  getStickerImageModel, setStickerImageModel 
+} from "../lib/client-storage";
+
+const ANALYSIS_MODELS = [
+  { value: "gemini-1.5-flash", label: "Gemini 1.5 Flash (Standard)" },
+  { value: "gemini-2.5-flash-lite", label: "Gemini 2.5 Flash-Lite" },
+  { value: "gemini-2.5-flash", label: "Gemini 2.5 Flash" },
+  { value: "gemini-2.5-flash-preview-09-2025", label: "Gemini 2.5 Flash (Preview 09-2025)" },
+];
+
+const IMAGE_MODELS = [
+  { value: "gemini-1.5-flash", label: "Gemini 1.5 Flash (Standard)" },
+  { value: "gemini-2.5-flash-image", label: "Gemini 2.5 Flash-Image" },
+];
 
 interface ProviderInfo {
   key: string;
@@ -47,6 +63,8 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
   const [inputs, setInputs] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState<string | null>(null);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [analysisModel, setAnalysisModel] = useState("gemini-1.5-flash");
+  const [imageModel, setImageModel] = useState("gemini-1.5-flash");
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
@@ -58,8 +76,24 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
         .then((data) => {
           if (data.status) setKeyStatus(data.status);
         });
+      setAnalysisModel(getStickerAnalysisModel());
+      setImageModel(getStickerImageModel());
     }
   }, [isOpen]);
+
+  const handleSaveAnalysisModel = (model: string) => {
+    setAnalysisModel(model);
+    setStickerAnalysisModel(model);
+    setMessage({ type: "success", text: "Analysis model updated." });
+    setTimeout(() => setMessage(null), 2000);
+  };
+
+  const handleSaveImageModel = (model: string) => {
+    setImageModel(model);
+    setStickerImageModel(model);
+    setMessage({ type: "success", text: "Image model updated." });
+    setTimeout(() => setMessage(null), 2000);
+  };
 
   const handleSaveKey = async (providerKey: string) => {
     const value = inputs[providerKey];
@@ -152,6 +186,45 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
               {message.text}
             </div>
           )}
+
+          {/* New Model Selection Sections */}
+          <section className="space-y-4">
+            <h3 className="text-[11px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-2">
+              <span className="material-symbols-outlined text-[16px]">analytics</span>
+              Analysis Model
+            </h3>
+            <div className="relative">
+              <select
+                value={analysisModel}
+                onChange={(e) => handleSaveAnalysisModel(e.target.value)}
+                className="w-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 text-xs font-bold text-zinc-900 dark:text-white outline-none focus:border-primary transition-all appearance-none cursor-pointer"
+              >
+                {ANALYSIS_MODELS.map((m) => (
+                  <option key={m.value} value={m.value}>{m.label}</option>
+                ))}
+              </select>
+              <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-400 text-[18px]">unfold_more</span>
+            </div>
+          </section>
+
+          <section className="space-y-4">
+            <h3 className="text-[11px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-2">
+              <span className="material-symbols-outlined text-[16px]">image</span>
+              Image Generation Model
+            </h3>
+            <div className="relative">
+              <select
+                value={imageModel}
+                onChange={(e) => handleSaveImageModel(e.target.value)}
+                className="w-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 text-xs font-bold text-zinc-900 dark:text-white outline-none focus:border-primary transition-all appearance-none cursor-pointer"
+              >
+                {IMAGE_MODELS.map((m) => (
+                  <option key={m.value} value={m.value}>{m.label}</option>
+                ))}
+              </select>
+              <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-400 text-[18px]">unfold_more</span>
+            </div>
+          </section>
 
           <section className="space-y-4">
             <h3 className="text-[11px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-2">

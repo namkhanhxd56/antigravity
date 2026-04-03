@@ -25,11 +25,13 @@ export async function POST(request: NextRequest) {
     }
 
     const apiKey = request.headers.get("x-gemini-api-key") || undefined;
+    const modelId = request.headers.get("x-sticker-model") || undefined;
 
     const refinedAnalysis = await routeRefinement(
       currentState,
       modifications,
-      apiKey
+      apiKey,
+      modelId
     );
 
     return NextResponse.json({ success: true, analysis: refinedAnalysis });

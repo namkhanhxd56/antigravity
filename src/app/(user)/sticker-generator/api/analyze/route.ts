@@ -21,11 +21,13 @@ export async function POST(request: NextRequest) {
     }
 
     const apiKey = request.headers.get("x-gemini-api-key") || undefined;
+    const modelId = request.headers.get("x-sticker-model") || undefined;
 
     const analysis = await routeAnalysis(
       imageBase64,
       mimeType || "image/png",
-      apiKey
+      apiKey,
+      modelId
     );
 
     return NextResponse.json({ success: true, analysis });

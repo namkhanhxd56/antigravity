@@ -157,28 +157,30 @@ function getProviderKey(providerName: string): string | undefined {
 export async function routeAnalysis(
   imageBase64: string,
   mimeType?: string,
-  clientApiKey?: string
+  clientApiKey?: string,
+  modelId?: string
 ) {
   const provider = getPreferredProvider();
   const key = clientApiKey || getProviderKey(provider.name);
-  return provider.analyzeSticker(imageBase64, mimeType, key);
+  return provider.analyzeSticker(imageBase64, mimeType, key, modelId);
 }
 
 export async function routeRefinement(
   currentState: any,
   modifications: string,
-  clientApiKey?: string
+  clientApiKey?: string,
+  modelId?: string
 ) {
   const provider = getPreferredProvider();
   const key = clientApiKey || getProviderKey(provider.name);
-  return provider.refineAnalysis(currentState, modifications, key);
+  return provider.refineAnalysis(currentState, modifications, key, modelId);
 }
 
 export async function routeGeneration(
   request: StickerGenerationRequest,
-  modelId: ModelId,
   apiKey?: string
 ): Promise<StickerGenerationResponse> {
+  const modelId = (request.selectedModel as ModelId) || "gemini-flash-image";
   const guardResult = guardApiKey(modelId, apiKey);
   if (guardResult) return guardResult;
 

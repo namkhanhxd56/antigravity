@@ -59,8 +59,7 @@ export async function POST(request: NextRequest) {
 
     // Route to provider
     const result = await routeGeneration(
-      { prompt, referenceImage, variations },
-      modelId,
+      { prompt, referenceImage, variations, selectedModel: modelId },
       apiKey
     );
 

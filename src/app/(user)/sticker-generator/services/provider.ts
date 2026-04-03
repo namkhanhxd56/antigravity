@@ -28,7 +28,8 @@ export interface AIProvider {
   analyzeSticker(
     imageBase64: string,
     mimeType?: string,
-    apiKey?: string
+    apiKey?: string,
+    modelId?: string
   ): Promise<StickerAnalysis>;
 
   /**
@@ -37,7 +38,8 @@ export interface AIProvider {
   refineAnalysis(
     currentState: StickerAnalysis,
     modifications: string,
-    apiKey?: string
+    apiKey?: string,
+    modelId?: string
   ): Promise<StickerAnalysis>;
 
   /**

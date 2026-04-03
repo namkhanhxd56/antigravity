@@ -39,11 +39,12 @@ export const geminiProvider: AIProvider = {
   async analyzeSticker(
     imageBase64: string,
     mimeType: string = "image/png",
-    apiKey?: string
+    apiKey?: string,
+    modelId?: string
   ): Promise<StickerAnalysis> {
     const genAI = getGeminiClient(apiKey);
     const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
+      model: modelId || "gemini-1.5-flash",
       systemInstruction: ANALYSIS_SYSTEM_INSTRUCTION,
     });
 
@@ -81,11 +82,12 @@ export const geminiProvider: AIProvider = {
   async refineAnalysis(
     currentState: StickerAnalysis,
     modifications: string,
-    apiKey?: string
+    apiKey?: string,
+    modelId?: string
   ): Promise<StickerAnalysis> {
     const genAI = getGeminiClient(apiKey);
     const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
+      model: modelId || "gemini-1.5-flash",
       systemInstruction: REFINE_ANALYSIS_PROMPT,
       generationConfig: {
         temperature: 0.1, // low temp for precision
@@ -128,8 +130,10 @@ export const geminiProvider: AIProvider = {
   ): Promise<StickerGenerationResponse> {
     try {
       const genAI = getGeminiClient(apiKey);
+      const selectedModelId = request.selectedModel || "gemini-1.5-flash";
+      
       const model = genAI.getGenerativeModel({
-        model: "gemini-1.5-flash", // Use 1.5 flash for images until 2.0 is GA
+        model: selectedModelId, 
         systemInstruction: GENERATION_SYSTEM_PROMPT,
         generationConfig: {
           // @ts-expect-error — responseModalities supported by API but not yet typed in SDK
@@ -194,14 +198,14 @@ export const geminiProvider: AIProvider = {
       if (images.length === 0) {
         return {
           success: false,
-          modelId: "gemini-flash-image",
+          modelId: selectedModelId as any,
           error: "Gemini did not return any images. Try adjusting your prompt or reducing variations.",
         };
       }
 
       return {
         success: true,
-        modelId: "gemini-flash-image",
+        modelId: selectedModelId as any,
         images,
       };
     } catch (error) {
@@ -209,7 +213,7 @@ export const geminiProvider: AIProvider = {
         error instanceof Error ? error.message : "Unknown generation error";
       return {
         success: false,
-        modelId: "gemini-flash-image",
+        modelId: (request.selectedModel as any) || "gemini-1.5-flash",
         error: message,
       };
     }

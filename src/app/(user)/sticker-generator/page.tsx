@@ -15,6 +15,7 @@ import type {
   ModelConfig,
   ModelId,
 } from "./lib/types";
+import { useStickerSettings } from "./lib/useStickerSettings";
 
 /** Default form state values. */
 const DEFAULT_FORM_STATE: StickerFormState = {
@@ -70,6 +71,7 @@ export default function StickerGeneratorPage() {
   const [isRefining, setIsRefining] = useState(false);
   const [availableModels, setAvailableModels] = useState<ModelConfig[]>([]);
   const [suggestedModel, setSuggestedModel] = useState<ModelId | undefined>();
+  const { settings } = useStickerSettings();
 
   const uploadedFileRef = useRef<File | null>(null);
 
@@ -126,6 +128,7 @@ export default function StickerGeneratorPage() {
         headers: {
           "Content-Type": "application/json",
           "x-gemini-api-key": apiKey,
+          "x-sticker-model": settings.analysisModel,
         },
         body: JSON.stringify({ imageBase64: base64, mimeType }),
       });
@@ -170,6 +173,7 @@ export default function StickerGeneratorPage() {
         headers: {
           "Content-Type": "application/json",
           "x-gemini-api-key": apiKey,
+          "x-sticker-model": settings.analysisModel,
         },
         body: JSON.stringify({
           currentState: formState,
@@ -222,7 +226,7 @@ export default function StickerGeneratorPage() {
         body: JSON.stringify({
           prompt,
           variations: formState.variations,
-          selectedModel: formState.selectedModel,
+          selectedModel: settings.imageModel, // Pass model selection for image gen
           quote: formState.quote,
         }),
       });

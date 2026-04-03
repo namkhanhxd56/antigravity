@@ -55,11 +55,12 @@ export const vertexProvider: AIProvider = {
   async analyzeSticker(
     imageBase64: string,
     mimeType: string = "image/png",
-    apiKey?: string // Reusing apiKey param to pass JSON string if provided from UI
+    apiKey?: string,
+    modelId?: string
   ): Promise<StickerAnalysis> {
     const vertexAI = getVertexClient(apiKey!);
     const model = vertexAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
+      model: modelId || "gemini-1.5-flash",
       systemInstruction: {
         role: "system",
         parts: [{ text: ANALYSIS_SYSTEM_INSTRUCTION }],
@@ -83,35 +84,24 @@ export const vertexProvider: AIProvider = {
       ],
     });
 
-    const response = await result.response;
-    const responseText = response.candidates?.[0]?.content?.parts?.[0]?.text || "";
-
+    const responseText = result.response.candidates?.[0]?.content?.parts?.[0]?.text || "";
     const cleanedJson = responseText
       .replace(/```json\s*/gi, "")
       .replace(/```\s*/g, "")
       .trim();
 
-    const analysis: StickerAnalysis = JSON.parse(cleanedJson);
-
-    return {
-      niche: analysis.niche ?? "",
-      targetAudience: analysis.targetAudience ?? "",
-      visualStyle: analysis.visualStyle ?? "",
-      quote: analysis.quote ?? "",
-      extractedElements: [],
-      imageDescription: analysis.imageDescription ?? "",
-      layoutStructure: analysis.layoutStructure ?? "",
-    };
+    return JSON.parse(cleanedJson);
   },
 
   async refineAnalysis(
     currentState: StickerAnalysis,
     modifications: string,
-    apiKey?: string
+    apiKey?: string,
+    modelId?: string
   ): Promise<StickerAnalysis> {
     const vertexAI = getVertexClient(apiKey!);
     const model = vertexAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
+      model: modelId || "gemini-1.5-flash",
       systemInstruction: {
         role: "system",
         parts: [{ text: REFINE_ANALYSIS_PROMPT }],
@@ -122,31 +112,26 @@ export const vertexProvider: AIProvider = {
       },
     });
 
-    const prompt = `CURRENT STATE:\n${JSON.stringify(currentState, null, 2)}\n\nUSER MODIFICATIONS:\n${modifications}`;
+    try {
+      const promptText = `CURRENT STATE:\n${JSON.stringify(currentState, null, 2)}\n\nUSER MODIFICATIONS:\n${modifications}`;
+      const result = await model.generateContent({
+        contents: [{ role: "user", parts: [{ text: promptText }] }],
+      });
+      const responseText = result.response.candidates?.[0]?.content?.parts?.[0]?.text || "";
+      const cleanedJson = responseText
+        .replace(/```json\s*/gi, "")
+        .replace(/```\s*/g, "")
+        .trim();
 
-    const result = await model.generateContent({
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-    });
-    
-    const response = await result.response;
-    const textResponse = response.candidates?.[0]?.content?.parts?.[0]?.text || "";
-
-    const cleanJson = textResponse
-      .replace(/```json/g, "")
-      .replace(/```/g, "")
-      .trim();
-
-    const analysis: StickerAnalysis = JSON.parse(cleanJson);
-
-    return {
-      niche: analysis.niche ?? "",
-      targetAudience: analysis.targetAudience ?? "",
-      visualStyle: analysis.visualStyle ?? "",
-      quote: analysis.quote ?? "",
-      extractedElements: currentState.extractedElements || [],
-      imageDescription: analysis.imageDescription ?? "",
-      layoutStructure: analysis.layoutStructure ?? "",
-    };
+      const analysis: StickerAnalysis = JSON.parse(cleanedJson);
+      return {
+        ...analysis,
+        extractedElements: currentState.extractedElements || [],
+      };
+    } catch (error) {
+      console.error("Vertex refine analysis error:", error);
+      throw new Error("Failed to refine structure via Vertex AI.");
+    }
   },
 
   async generateSticker(
@@ -155,20 +140,21 @@ export const vertexProvider: AIProvider = {
   ): Promise<StickerGenerationResponse> {
     try {
       const vertexAI = getVertexClient(apiKey!);
+      const selectedModelId = request.selectedModel || "gemini-1.5-flash";
+
       const model = vertexAI.getGenerativeModel({
-        model: "gemini-1.5-flash", // Note: standard flash supports multimodal
+        model: selectedModelId, 
         systemInstruction: {
           role: "system",
           parts: [{ text: GENERATION_SYSTEM_PROMPT }],
         },
         generationConfig: {
-          // @ts-ignore - responseModalities is supported but might not be in types yet
+          // @ts-expect-error — responseModalities supported by API but not yet typed in SDK
           responseModalities: ["TEXT", "IMAGE"],
-        } as GenerationConfig,
+        },
       });
 
       const images: string[] = [];
-
       const generatePromises = Array.from(
         { length: request.variations },
         async (_, i) => {
@@ -177,47 +163,50 @@ export const vertexProvider: AIProvider = {
             "",
             "[IMPORTANT] The reference image below is ONLY for thematic inspiration.",
             "DO NOT replicate its layout, composition, or pose.",
-            "Create an ENTIRELY NEW design based on the text descriptions above.",
-            `Variation ${i + 1} of ${request.variations}.`,
+            "Create an ENTIRELY NEW design based on the text descriptions.",
+            `Variation ${i + 1} of ${request.variations}`,
           ].join("\n");
 
-          const result = await model.generateContent({
-            contents: [{ role: "user", parts: [{ text: textPrompt }] }],
-          });
+          const parts: any[] = [{ text: textPrompt }];
+          if (request.referenceImage) {
+            parts.push({
+              inlineData: {
+                mimeType: "image/png",
+                data: request.referenceImage,
+              },
+            });
+          }
 
-          const response = await result.response;
-          const candidates = response.candidates;
-          
-          if (candidates?.[0]?.content?.parts) {
-            for (const part of candidates[0].content.parts) {
+          const result = await model.generateContent({
+            contents: [{ role: "user", parts }],
+          });
+          const response = result.response;
+          const candidateParts = response.candidates?.[0]?.content?.parts;
+
+          if (candidateParts) {
+            for (const part of candidateParts) {
               if (part.inlineData?.data) {
                 return `data:${part.inlineData.mimeType || "image/png"};base64,${part.inlineData.data}`;
               }
             }
           }
-          throw new Error("No image in Vertex AI response");
+          throw new Error("No image in Vertex response part");
         }
       );
 
       const results = await Promise.allSettled(generatePromises);
-
-      for (const res of results) {
-        if (res.status === "fulfilled" && res.value) {
-          images.push(res.value);
-        }
+      for (const result of results) {
+        if (result.status === "fulfilled" && result.value) images.push(result.value);
       }
 
-      if (images.length === 0) throw new Error("Vertex AI generation failed.");
+      if (images.length === 0) {
+        return { success: false, modelId: selectedModelId as any, error: "No images generated via Vertex" };
+      }
 
-      return {
-        success: true,
-        modelId: "vertex-gemini-flash",
-        images,
-      };
+      return { success: true, modelId: selectedModelId as any, images };
     } catch (error) {
       return {
         success: false,
-        modelId: "vertex-gemini-flash",
         error: error instanceof Error ? error.message : "Unknown error",
       };
     }

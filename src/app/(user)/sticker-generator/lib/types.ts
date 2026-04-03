@@ -17,6 +17,11 @@ export interface ExtractedElement {
 /** Supported AI model identifiers for sticker generation. */
 export type ModelId =
   | "gemini-flash-image"
+  | "gemini-2.5-flash-image"
+  | "gemini-1.5-flash"
+  | "gemini-2.5-flash"
+  | "gemini-2.5-flash-lite"
+  | "gemini-2.5-flash-preview-09-2025"
   | "vertex-gemini-flash"
   | "ideogram-2"
   | "dall-e-3";
@@ -113,6 +118,9 @@ export interface StickerResult {
 export interface StickerGenerationRequest {
   /** The fully composed prompt (form fields + master rules) */
   prompt: string;
+
+  /** Which model to use for generation */
+  selectedModel?: string;
 
   /** Optional uploaded reference image as a base64-encoded string */
   referenceImage?: string;
