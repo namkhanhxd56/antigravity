@@ -38,6 +38,20 @@ const MODEL_REGISTRY: Omit<ModelConfig, "available">[] = [
     strengths: ["speed", "default"],
   },
   {
+    id: "gemini-2.0-flash-lite-001",
+    name: "Gemini 2.0 Flash-Lite (001)",
+    description: "Ultra-fast Next Gen Flash",
+    envKey: "GEMINI_API_KEY",
+    strengths: ["speed", "multimodal"],
+  },
+  {
+    id: "gemini-2.0-flash-001",
+    name: "Gemini 2.0 Flash (001)",
+    description: "High-performance Next Gen Flash",
+    envKey: "GEMINI_API_KEY",
+    strengths: ["quality", "speed"],
+  },
+  {
     id: "gemini-2.5-flash-image",
     name: "Gemini 2.5 Flash-Image",
     description: "Latest 2.5 Flash for image generation",
@@ -174,15 +188,29 @@ export function suggestModel(
   return available[0].id;
 }
 
+function isVertexJson(key?: string): boolean {
+  if (!key) return false;
+  const trimmed = key.trim();
+  return trimmed.startsWith("{") && trimmed.endsWith("}");
+}
+
 /**
  * Selection Logic: Prefer Vertex AI if available, else Gemini API.
+ * SMART: If the provided key looks like JSON, force Vertex provider.
  */
-function getPreferredProvider() {
+function getPreferredProvider(clientApiKey?: string) {
+  if (isVertexJson(clientApiKey)) return vertexProvider;
+  
+  const geminiKey = resolveApiKey("STICKER_GEMINI_API_KEY" as any) || resolveApiKey("GEMINI_API_KEY");
+  if (isVertexJson(geminiKey)) return vertexProvider;
+
   const isVertex = !!(resolveApiKey("STICKER_VERTEX_AI_JSON" as any) || resolveApiKey("VERTEX_AI_JSON"));
   return isVertex ? vertexProvider : geminiProvider;
 }
 
-function getProviderKey(providerName: string): string | undefined {
+function getProviderKey(providerName: string, clientApiKey?: string): string | undefined {
+  if (isVertexJson(clientApiKey)) return clientApiKey;
+
   if (providerName === "Vertex AI") {
     return resolveApiKey("STICKER_VERTEX_AI_JSON" as any) || resolveApiKey("VERTEX_AI_JSON");
   }
@@ -195,8 +223,8 @@ export async function routeAnalysis(
   clientApiKey?: string,
   modelId?: string
 ) {
-  const provider = getPreferredProvider();
-  const key = clientApiKey || getProviderKey(provider.name);
+  const provider = getPreferredProvider(clientApiKey);
+  const key = clientApiKey || getProviderKey(provider.name, clientApiKey);
   return provider.analyzeSticker(imageBase64, mimeType, key, modelId);
 }
 
@@ -206,8 +234,8 @@ export async function routeRefinement(
   clientApiKey?: string,
   modelId?: string
 ) {
-  const provider = getPreferredProvider();
-  const key = clientApiKey || getProviderKey(provider.name);
+  const provider = getPreferredProvider(clientApiKey);
+  const key = clientApiKey || getProviderKey(provider.name, clientApiKey);
   return provider.refineAnalysis(currentState, modifications, key, modelId);
 }
 
@@ -228,14 +256,18 @@ export async function routeGeneration(
 
     case "gemini-flash-image":
     case "gemini-1.5-flash":
+    case "gemini-2.0-flash":
+    case "gemini-2.0-flash-lite":
+    case "gemini-2.0-flash-lite-001":
+    case "gemini-2.0-flash-001":
     case "gemini-2.5-flash-image":
     case "gemini-2.5-flash-lite":
     case "gemini-2.5-flash":
-    case "gemini-2.5-flash-preview-09-2025":
-      return geminiProvider.generateSticker(
-        request,
-        apiKey || resolveApiKey("GEMINI_API_KEY")
-      );
+    case "gemini-2.5-flash-preview-09-2025": {
+      const provider = getPreferredProvider(apiKey);
+      const providerKey = apiKey || getProviderKey(provider.name, apiKey);
+      return provider.generateSticker(request, providerKey);
+    }
 
     case "ideogram-2":
     case "dall-e-3":
