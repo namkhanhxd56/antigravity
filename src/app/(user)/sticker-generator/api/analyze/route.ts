@@ -48,11 +48,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const vertexApiKeyHint = request.headers.get("x-sticker-vertex-key") || undefined;
+
     const analysis = await routeAnalysis(
       imageBase64,
       mimeType || "image/png",
       resolvedKey,
-      model
+      model,
+      vertexApiKeyHint
     );
 
     return NextResponse.json({ success: true, analysis });

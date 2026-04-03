@@ -51,11 +51,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const vertexApiKeyHint = request.headers.get("x-sticker-vertex-key") || undefined;
+
     const refinedAnalysis = await routeRefinement(
       currentState,
       modifications,
       resolvedKey,
-      model
+      model,
+      vertexApiKeyHint
     );
 
     return NextResponse.json({ success: true, analysis: refinedAnalysis });

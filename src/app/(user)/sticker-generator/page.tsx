@@ -7,7 +7,7 @@ import ResultGrid from "./components/ResultGrid";
 import StickerNav from "./components/StickerNav";
 import { STICKER_MASTER_RULES } from "./lib/rules";
 import { fileToBase64 } from "@/lib/utils";
-import { getStickerAnalysisModel, getStickerActiveKey } from "./lib/client-storage";
+import { getStickerAnalysisModel, getStickerActiveKey, getStickerVertexApiKey } from "./lib/client-storage";
 import type {
   StickerFormState,
   StickerResult,
@@ -124,6 +124,7 @@ export default function StickerGeneratorPage() {
         headers: {
           "Content-Type": "application/json",
           "x-sticker-api-key": getStickerActiveKey() ?? "",
+          "x-sticker-vertex-key": getStickerVertexApiKey() ?? "",
         },
         body: JSON.stringify({
           imageBase64: base64,
@@ -171,6 +172,7 @@ export default function StickerGeneratorPage() {
         headers: {
           "Content-Type": "application/json",
           "x-sticker-api-key": getStickerActiveKey() ?? "",
+          "x-sticker-vertex-key": getStickerVertexApiKey() ?? "",
         },
         body: JSON.stringify({
           currentState: formState,
@@ -219,6 +221,7 @@ export default function StickerGeneratorPage() {
         headers: {
           "Content-Type": "application/json",
           "x-sticker-api-key": getStickerActiveKey() ?? "",
+          "x-sticker-vertex-key": getStickerVertexApiKey() ?? "",
         },
         body: JSON.stringify({
           prompt,

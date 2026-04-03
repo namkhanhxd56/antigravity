@@ -67,9 +67,12 @@ export async function POST(request: NextRequest) {
     }
 
     // ─── Route generation ───────────────────────────────────────────────────
+    const vertexApiKeyHint = request.headers.get("x-sticker-vertex-key") || undefined;
+
     const result = await routeGeneration(
       { prompt, referenceImage, variations, selectedModel: modelId },
-      resolvedKey
+      resolvedKey,
+      vertexApiKeyHint
     );
 
     return NextResponse.json({

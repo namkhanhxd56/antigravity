@@ -157,10 +157,18 @@ function isVertexJson(key?: string): boolean {
  * - Regular API key but STICKER_VERTEX_API_KEY is stored → Vertex AI (API Key)
  * - Otherwise → Gemini
  */
-function getPreferredProvider(resolvedKey?: string) {
+/**
+ * vertexApiKeyHint: the raw Vertex API key sent via a dedicated header from the client.
+ * This avoids server-side storage lookup (which fails after cold start) to distinguish
+ * a Vertex API key from a Gemini API key — both look like "AIzaSy..." in value.
+ */
+function getPreferredProvider(resolvedKey?: string, vertexApiKeyHint?: string) {
   if (isVertexJson(resolvedKey)) return vertexProvider;
 
-  // If the key matches what's stored as a Vertex API key, use Vertex Express
+  // Client sent an explicit Vertex API key hint — trust it
+  if (vertexApiKeyHint && resolvedKey === vertexApiKeyHint) return vertexApiKeyProvider;
+
+  // Fallback: check server-side storage (works locally / when server storage is warm)
   const storedVertexApiKey = resolveApiKey("STICKER_VERTEX_API_KEY" as ProviderKey);
   if (storedVertexApiKey && resolvedKey === storedVertexApiKey) return vertexApiKeyProvider;
 
@@ -185,9 +193,10 @@ export async function routeAnalysis(
   imageBase64: string,
   mimeType?: string,
   resolvedKey?: string,
-  modelId?: string
+  modelId?: string,
+  vertexApiKeyHint?: string
 ) {
-  const provider = getPreferredProvider(resolvedKey);
+  const provider = getPreferredProvider(resolvedKey, vertexApiKeyHint);
   return provider.analyzeSticker(imageBase64, mimeType, resolvedKey, resolveModel(provider, modelId, "text"));
 }
 
@@ -195,19 +204,21 @@ export async function routeRefinement(
   currentState: any,
   modifications: string,
   resolvedKey?: string,
-  modelId?: string
+  modelId?: string,
+  vertexApiKeyHint?: string
 ) {
-  const provider = getPreferredProvider(resolvedKey);
+  const provider = getPreferredProvider(resolvedKey, vertexApiKeyHint);
   return provider.refineAnalysis(currentState, modifications, resolvedKey, resolveModel(provider, modelId, "text"));
 }
 
 export async function routeGeneration(
   request: StickerGenerationRequest,
-  apiKey?: string
+  apiKey?: string,
+  vertexApiKeyHint?: string
 ): Promise<StickerGenerationResponse> {
   const modelId = (request.selectedModel as ModelId) || "gemini-flash-image";
 
-  const provider = getPreferredProvider(apiKey);
+  const provider = getPreferredProvider(apiKey, vertexApiKeyHint);
   const normalizedRequest = { ...request, selectedModel: resolveModel(provider, modelId, "image") };
   return provider.generateSticker(normalizedRequest, apiKey);
 }
