@@ -27,10 +27,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ─── Resolve credentials — sticker-specific first, global as fallback ──
+    // ─── Resolve credentials — client header first, then server-side fallback ──
     const storedKeys = readStoredKeys();
 
     const resolvedKey =
+      request.headers.get("x-sticker-api-key") ||
       storedKeys.STICKER_VERTEX_AI_JSON ||
       process.env.STICKER_VERTEX_AI_JSON ||
       storedKeys.STICKER_VERTEX_API_KEY ||

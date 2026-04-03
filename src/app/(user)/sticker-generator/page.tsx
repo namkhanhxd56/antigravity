@@ -7,7 +7,7 @@ import ResultGrid from "./components/ResultGrid";
 import StickerNav from "./components/StickerNav";
 import { STICKER_MASTER_RULES } from "./lib/rules";
 import { fileToBase64 } from "@/lib/utils";
-import { getStickerAnalysisModel } from "./lib/client-storage";
+import { getStickerAnalysisModel, getStickerActiveKey } from "./lib/client-storage";
 import type {
   StickerFormState,
   StickerResult,
@@ -121,7 +121,10 @@ export default function StickerGeneratorPage() {
 
       const response = await fetch("/sticker-generator/api/analyze", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-sticker-api-key": getStickerActiveKey() ?? "",
+        },
         body: JSON.stringify({
           imageBase64: base64,
           mimeType,
@@ -165,7 +168,10 @@ export default function StickerGeneratorPage() {
     try {
       const response = await fetch("/sticker-generator/api/refine", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-sticker-api-key": getStickerActiveKey() ?? "",
+        },
         body: JSON.stringify({
           currentState: formState,
           modifications,
@@ -210,7 +216,10 @@ export default function StickerGeneratorPage() {
     try {
       const response = await fetch("/sticker-generator/api/generate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-sticker-api-key": getStickerActiveKey() ?? "",
+        },
         body: JSON.stringify({
           prompt,
           variations: formState.variations,

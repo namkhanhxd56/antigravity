@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useTheme } from "next-themes";
+import { setStickerApiKey, setStickerVertexApiKey, setStickerVertexJson } from "../lib/client-storage";
 
 interface ProviderInfo {
   key: string;
@@ -69,6 +70,12 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
     }
   }, [isOpen]);
 
+  const mirrorToLocalStorage = useCallback((providerKey: string, value: string) => {
+    if (providerKey === "STICKER_GEMINI_API_KEY") setStickerApiKey(value);
+    else if (providerKey === "STICKER_VERTEX_API_KEY") setStickerVertexApiKey(value);
+    else if (providerKey === "STICKER_VERTEX_AI_JSON") setStickerVertexJson(value);
+  }, []);
+
   const handleSaveKey = async (providerKey: string) => {
     const value = inputs[providerKey];
     if (!value?.trim()) return;
@@ -95,6 +102,7 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
       if (data.success) {
         setKeyStatus(data.status);
         setInputs((prev) => ({ ...prev, [providerKey]: "" }));
+        mirrorToLocalStorage(providerKey, value.trim());
         setMessage({ type: "success", text: "Settings saved successfully!" });
       }
     } catch {
@@ -117,6 +125,7 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
       const data = await res.json();
       if (data.success) {
         setKeyStatus(data.status);
+        mirrorToLocalStorage(providerKey, "");
         setMessage({ type: "success", text: "Key cleared." });
       }
     } finally {
