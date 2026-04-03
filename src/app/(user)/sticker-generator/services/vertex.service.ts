@@ -101,7 +101,7 @@ export const vertexProvider: AIProvider = {
   ): Promise<StickerAnalysis> {
     const vertexAI = getVertexClient(apiKey!);
     const model = vertexAI.getGenerativeModel({
-      model: modelId || "gemini-1.5-flash",
+      model: modelId || "gemini-1.5-flash-002",
       systemInstruction: {
         role: "system",
         parts: [{ text: REFINE_ANALYSIS_PROMPT }],

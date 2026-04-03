@@ -8,16 +8,18 @@ import {
 } from "../lib/client-storage";
 
 const ANALYSIS_MODELS = [
-  { value: "gemini-1.5-flash", label: "Gemini 1.5 Flash (Standard)" },
+  { value: "gemini-1.5-flash-002", label: "Gemini 1.5 Flash (v2)" },
   { value: "gemini-2.0-flash-lite-001", label: "Gemini 2.0 Flash-Lite (001)" },
   { value: "gemini-2.0-flash-001", label: "Gemini 2.0 Flash (001)" },
   { value: "gemini-2.5-flash-lite", label: "Gemini 2.5 Flash-Lite" },
+  { value: "gemini-1.5-flash", label: "Gemini 1.5 Flash (Studio Only)" },
   { value: "gemini-2.5-flash", label: "Gemini 2.5 Flash" },
   { value: "gemini-2.5-flash-preview-09-2025", label: "Gemini 2.5 Flash (Preview 09-2025)" },
 ];
 
 const IMAGE_MODELS = [
-  { value: "gemini-1.5-flash", label: "Gemini 1.5 Flash (Standard)" },
+  { value: "gemini-1.5-flash-002", label: "Gemini 1.5 Flash (v2)" },
+  { value: "gemini-1.5-flash", label: "Gemini 1.5 Flash (Studio Only)" },
   { value: "gemini-2.0-flash-001", label: "Gemini 2.0 Flash (001)" },
   { value: "gemini-2.5-flash-image", label: "Gemini 2.5 Flash-Image" },
 ];

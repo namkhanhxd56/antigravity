@@ -31,9 +31,9 @@ const MODEL_REGISTRY: Omit<ModelConfig, "available">[] = [
     strengths: ["speed", "multi-image", "default"],
   },
   {
-    id: "gemini-1.5-flash",
-    name: "Gemini 1.5 Flash",
-    description: "Standard Flash model",
+    id: "gemini-1.5-flash-002",
+    name: "Gemini 1.5 Flash (v2)",
+    description: "Standard Flash model (v2)",
     envKey: "GEMINI_API_KEY",
     strengths: ["speed", "default"],
   },
