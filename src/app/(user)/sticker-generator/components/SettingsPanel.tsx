@@ -2,27 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useTheme } from "next-themes";
-import { 
-  getStickerAnalysisModel, setStickerAnalysisModel, 
-  getStickerImageModel, setStickerImageModel 
-} from "../lib/client-storage";
-
-const ANALYSIS_MODELS = [
-  { value: "gemini-1.5-flash-002", label: "Gemini 1.5 Flash (v2)" },
-  { value: "gemini-2.0-flash-lite-001", label: "Gemini 2.0 Flash-Lite (001)" },
-  { value: "gemini-2.0-flash-001", label: "Gemini 2.0 Flash (001)" },
-  { value: "gemini-2.5-flash-lite", label: "Gemini 2.5 Flash-Lite" },
-  { value: "gemini-1.5-flash", label: "Gemini 1.5 Flash (Studio Only)" },
-  { value: "gemini-2.5-flash", label: "Gemini 2.5 Flash" },
-  { value: "gemini-2.5-flash-preview-09-2025", label: "Gemini 2.5 Flash (Preview 09-2025)" },
-];
-
-const IMAGE_MODELS = [
-  { value: "gemini-1.5-flash-002", label: "Gemini 1.5 Flash (v2)" },
-  { value: "gemini-1.5-flash", label: "Gemini 1.5 Flash (Studio Only)" },
-  { value: "gemini-2.0-flash-001", label: "Gemini 2.0 Flash (001)" },
-  { value: "gemini-2.5-flash-image", label: "Gemini 2.5 Flash-Image" },
-];
 
 interface ProviderInfo {
   key: string;
@@ -38,15 +17,23 @@ const PROVIDERS: ProviderInfo[] = [
     key: "STICKER_GEMINI_API_KEY",
     name: "Google Gemini (AI Studio)",
     icon: "diamond",
-    description: "Powers sticker analysis and image generation",
+    description: "API Key từ AI Studio — aistudio.google.com/apikey",
     docsUrl: "https://aistudio.google.com/apikey",
     placeholder: "AIzaSy...",
   },
   {
+    key: "STICKER_VERTEX_API_KEY",
+    name: "Vertex AI (API Key)",
+    icon: "vpn_key",
+    description: "API Key từ Google Cloud → Vertex AI Studio → API Keys",
+    docsUrl: "https://console.cloud.google.com/vertex-ai/studio/settings/api-keys",
+    placeholder: "AIzaSy...",
+  },
+  {
     key: "STICKER_VERTEX_AI_JSON",
-    name: "Vertex AI (GCP)",
+    name: "Vertex AI (Service Account JSON)",
     icon: "cloud",
-    description: "Enterprise access via Service Account JSON",
+    description: "Service Account JSON — dành cho GCP production",
     docsUrl: "https://console.cloud.google.com/vertex-ai",
     placeholder: '{ "type": "service_account", ... }',
   }
@@ -68,8 +55,6 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
   const [inputs, setInputs] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState<string | null>(null);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
-  const [analysisModel, setAnalysisModel] = useState("gemini-1.5-flash");
-  const [imageModel, setImageModel] = useState("gemini-1.5-flash");
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
@@ -81,35 +66,19 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
         .then((data) => {
           if (data.status) setKeyStatus(data.status);
         });
-      setAnalysisModel(getStickerAnalysisModel());
-      setImageModel(getStickerImageModel());
     }
   }, [isOpen]);
-
-  const handleSaveAnalysisModel = (model: string) => {
-    setAnalysisModel(model);
-    setStickerAnalysisModel(model);
-    setMessage({ type: "success", text: "Analysis model updated." });
-    setTimeout(() => setMessage(null), 2000);
-  };
-
-  const handleSaveImageModel = (model: string) => {
-    setImageModel(model);
-    setStickerImageModel(model);
-    setMessage({ type: "success", text: "Image model updated." });
-    setTimeout(() => setMessage(null), 2000);
-  };
 
   const handleSaveKey = async (providerKey: string) => {
     const value = inputs[providerKey];
     if (!value?.trim()) return;
 
-    // Basic JSON validation for Vertex
-    if (providerKey.includes("VERTEX")) {
+    // JSON validation only for Service Account keys (ends with _AI_JSON)
+    if (providerKey.endsWith("_AI_JSON")) {
       try {
         JSON.parse(value);
-      } catch (e) {
-        setMessage({ type: "error", text: "Invalid JSON format for Vertex AI. Please paste the entire Service Account JSON file." });
+      } catch {
+        setMessage({ type: "error", text: "Invalid JSON format. Please paste the entire Service Account JSON file." });
         setTimeout(() => setMessage(null), 5000);
         return;
       }
@@ -191,45 +160,6 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
               {message.text}
             </div>
           )}
-
-          {/* New Model Selection Sections */}
-          <section className="space-y-4">
-            <h3 className="text-[11px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-2">
-              <span className="material-symbols-outlined text-[16px]">analytics</span>
-              Analysis Model
-            </h3>
-            <div className="relative">
-              <select
-                value={analysisModel}
-                onChange={(e) => handleSaveAnalysisModel(e.target.value)}
-                className="w-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 text-xs font-bold text-zinc-900 dark:text-white outline-none focus:border-primary transition-all appearance-none cursor-pointer"
-              >
-                {ANALYSIS_MODELS.map((m) => (
-                  <option key={m.value} value={m.value}>{m.label}</option>
-                ))}
-              </select>
-              <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-400 text-[18px]">unfold_more</span>
-            </div>
-          </section>
-
-          <section className="space-y-4">
-            <h3 className="text-[11px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-2">
-              <span className="material-symbols-outlined text-[16px]">image</span>
-              Image Generation Model
-            </h3>
-            <div className="relative">
-              <select
-                value={imageModel}
-                onChange={(e) => handleSaveImageModel(e.target.value)}
-                className="w-full bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 text-xs font-bold text-zinc-900 dark:text-white outline-none focus:border-primary transition-all appearance-none cursor-pointer"
-              >
-                {IMAGE_MODELS.map((m) => (
-                  <option key={m.value} value={m.value}>{m.label}</option>
-                ))}
-              </select>
-              <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-400 text-[18px]">unfold_more</span>
-            </div>
-          </section>
 
           <section className="space-y-4">
             <h3 className="text-[11px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-2">

@@ -13,6 +13,8 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import fs from "fs";
 import path from "path";
 import type { RewriteRequest } from "../../lib/types";
+import { readStoredKeys } from "@/lib/key-storage";
+import { vertexExpressGenerate } from "@/lib/vertex-express";
 
 const BASE_DIR = path.join(
   process.cwd(), "src", "app", "(user)", "content-curator", "skills", "_base"
@@ -88,14 +90,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const storedKeys = readStoredKeys();
+    const vertexApiKey =
+      storedKeys.CURATOR_VERTEX_API_KEY || process.env.CURATOR_VERTEX_API_KEY;
     const apiKey =
-      request.headers.get("x-gemini-api-key") || 
-      process.env.CURATOR_GEMINI_API_KEY || 
+      request.headers.get("x-gemini-api-key") ||
+      storedKeys.CURATOR_GEMINI_API_KEY ||
+      process.env.CURATOR_GEMINI_API_KEY ||
+      storedKeys.GEMINI_API_KEY ||
       process.env.GEMINI_API_KEY;
 
-    if (!apiKey) {
+    if (!apiKey && !vertexApiKey) {
       return NextResponse.json(
-        { success: false, error: "GEMINI_API_KEY is not configured." },
+        { success: false, error: "No API credentials configured. Please add a Gemini or Vertex AI key in Settings." },
         { status: 400 }
       );
     }
@@ -104,20 +111,35 @@ export async function POST(request: NextRequest) {
     const fileLimits = readLimits();
     const resolvedCharLimit =
       charLimit ??
-      (section === "title"       ? fileLimits.title :
-       section === "bullet"      ? fileLimits.bulletItem :
-                                   fileLimits.description);
+      (section === "title"  ? fileLimits.title :
+       section === "bullet" ? fileLimits.bulletItem :
+                              fileLimits.description);
 
     const prompt = buildRewritePrompt(body, resolvedCharLimit);
 
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const geminiModel = genAI.getGenerativeModel({
-      model: model || "gemini-2.5-flash",
-      generationConfig: { temperature: 0.65 },
-    });
+    let rewritten: string;
 
-    const result = await geminiModel.generateContent(prompt);
-    const rewritten = result.response.text().trim().replace(/^["']+|["']+$/g, "");
+    if (vertexApiKey) {
+      // ─── Vertex AI Express (API Key) ────────────────────────────────────
+      const vertexResponse = await vertexExpressGenerate(
+        vertexApiKey,
+        model || "gemini-2.0-flash-001",
+        [{ role: "user", parts: [{ text: prompt }] }],
+        { temperature: 0.65 }
+      );
+      rewritten = (vertexResponse.candidates?.[0]?.content?.parts?.[0]?.text || "")
+        .trim()
+        .replace(/^["']+|["']+$/g, "");
+    } else {
+      // ─── Gemini API ─────────────────────────────────────────────────────
+      const genAI = new GoogleGenerativeAI(apiKey!);
+      const geminiModel = genAI.getGenerativeModel({
+        model: model || "gemini-2.5-flash",
+        generationConfig: { temperature: 0.65 },
+      });
+      const result = await geminiModel.generateContent(prompt);
+      rewritten = result.response.text().trim().replace(/^["']+|["']+$/g, "");
+    }
 
     // Warn if AI still exceeded the limit
     const overBy = rewritten.length - resolvedCharLimit;

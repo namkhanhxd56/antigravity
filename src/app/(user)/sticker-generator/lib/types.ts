@@ -19,6 +19,7 @@ export type ModelId =
   | "gemini-flash-image"
   | "gemini-2.5-flash-image"
   | "gemini-1.5-flash"
+  | "gemini-1.5-flash-002"
   | "gemini-2.0-flash"
   | "gemini-2.0-flash-lite"
   | "gemini-2.0-flash-lite-001"
@@ -26,6 +27,8 @@ export type ModelId =
   | "gemini-2.5-flash"
   | "gemini-2.5-flash-lite"
   | "gemini-2.5-flash-preview-09-2025"
+  | "gemini-3.1-flash-image-preview"
+  | "gemini-3-pro-image-preview"
   | "vertex-gemini-flash"
   | "ideogram-2"
   | "dall-e-3";

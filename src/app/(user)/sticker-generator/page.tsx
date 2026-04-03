@@ -7,7 +7,7 @@ import ResultGrid from "./components/ResultGrid";
 import StickerNav from "./components/StickerNav";
 import { STICKER_MASTER_RULES } from "./lib/rules";
 import { fileToBase64 } from "@/lib/utils";
-import { getStoredApiKey } from "./lib/client-storage";
+import { getStickerAnalysisModel } from "./lib/client-storage";
 import type {
   StickerFormState,
   StickerResult,
@@ -15,7 +15,6 @@ import type {
   ModelConfig,
   ModelId,
 } from "./lib/types";
-import { useStickerSettings } from "./lib/useStickerSettings";
 
 /** Default form state values. */
 const DEFAULT_FORM_STATE: StickerFormState = {
@@ -71,8 +70,6 @@ export default function StickerGeneratorPage() {
   const [isRefining, setIsRefining] = useState(false);
   const [availableModels, setAvailableModels] = useState<ModelConfig[]>([]);
   const [suggestedModel, setSuggestedModel] = useState<ModelId | undefined>();
-  const { settings } = useStickerSettings();
-
   const uploadedFileRef = useRef<File | null>(null);
 
   // Fetch available models on mount
@@ -122,15 +119,14 @@ export default function StickerGeneratorPage() {
       const base64 = await fileToBase64(file);
       const mimeType = file.type || "image/png";
 
-      const apiKey = getStoredApiKey() || "";
       const response = await fetch("/sticker-generator/api/analyze", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-gemini-api-key": apiKey,
-          "x-sticker-model": settings.analysisModel,
-        },
-        body: JSON.stringify({ imageBase64: base64, mimeType }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          imageBase64: base64,
+          mimeType,
+          model: getStickerAnalysisModel(),
+        }),
       });
 
       const data = await response.json();
@@ -167,17 +163,13 @@ export default function StickerGeneratorPage() {
     setIsRefining(true);
 
     try {
-      const apiKey = getStoredApiKey() || "";
       const response = await fetch("/sticker-generator/api/refine", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-gemini-api-key": apiKey,
-          "x-sticker-model": settings.analysisModel,
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           currentState: formState,
           modifications,
+          model: getStickerAnalysisModel(),
         }),
       });
 
@@ -216,17 +208,13 @@ export default function StickerGeneratorPage() {
     const prompt = buildGenerationPrompt(formState);
 
     try {
-      const apiKey = getStoredApiKey() || "";
       const response = await fetch("/sticker-generator/api/generate", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-gemini-api-key": apiKey,
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           prompt,
           variations: formState.variations,
-          selectedModel: settings.imageModel, // Pass model selection for image gen
+          selectedModel: formState.selectedModel,
           quote: formState.quote,
         }),
       });

@@ -27,8 +27,8 @@ export function removeStickerApiKey(): void {
 }
 
 export function getStickerAnalysisModel(): string {
-  if (typeof window === "undefined") return "gemini-1.5-flash";
-  return localStorage.getItem(STICKER_ANALYSIS_MODEL_KEY) ?? "gemini-1.5-flash";
+  if (typeof window === "undefined") return "gemini-2.0-flash";
+  return localStorage.getItem(STICKER_ANALYSIS_MODEL_KEY) ?? "gemini-2.0-flash";
 }
 
 export function setStickerAnalysisModel(model: string): void {
@@ -37,8 +37,8 @@ export function setStickerAnalysisModel(model: string): void {
 }
 
 export function getStickerImageModel(): string {
-  if (typeof window === "undefined") return "gemini-1.5-flash";
-  return localStorage.getItem(STICKER_IMAGE_MODEL_KEY) ?? "gemini-1.5-flash";
+  if (typeof window === "undefined") return "gemini-2.0-flash";
+  return localStorage.getItem(STICKER_IMAGE_MODEL_KEY) ?? "gemini-2.0-flash";
 }
 
 export function setStickerImageModel(model: string): void {
@@ -47,8 +47,8 @@ export function setStickerImageModel(model: string): void {
 }
 
 export function getStickerModel(): string {
-  if (typeof window === "undefined") return "gemini-1.5-flash";
-  return localStorage.getItem(STICKER_MODEL_KEY) ?? "gemini-1.5-flash";
+  if (typeof window === "undefined") return "gemini-2.0-flash";
+  return localStorage.getItem(STICKER_MODEL_KEY) ?? "gemini-2.0-flash";
 }
 
 export function setStickerModel(model: string): void {

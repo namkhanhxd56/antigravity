@@ -16,6 +16,7 @@ import path from "path";
 import { buildGeneratePrompt, type LimitsConfig } from "../../lib/promptBuilder";
 import type { GenerateRequest } from "../../lib/types";
 import { readStoredKeys } from "@/lib/key-storage";
+import { vertexExpressGenerate } from "@/lib/vertex-express";
 
 const BASE_DIR = path.join(
   process.cwd(), "src", "app", "(user)", "content-curator", "skills", "_base"
@@ -107,18 +108,20 @@ export async function POST(request: NextRequest) {
     const globalVertexJson = storedKeys.VERTEX_AI_JSON || process.env.VERTEX_AI_JSON;
     const vertexJson = curatorVertexJson || globalVertexJson;
 
+    const vertexApiKey = storedKeys.CURATOR_VERTEX_API_KEY || process.env.CURATOR_VERTEX_API_KEY;
+
     const apiKey =
-      request.headers.get("x-gemini-api-key") || 
+      request.headers.get("x-gemini-api-key") ||
       storedKeys.CURATOR_GEMINI_API_KEY ||
-      process.env.CURATOR_GEMINI_API_KEY || 
+      process.env.CURATOR_GEMINI_API_KEY ||
       storedKeys.GEMINI_API_KEY ||
       process.env.GEMINI_API_KEY;
 
-    if (!apiKey && !vertexJson) {
+    if (!apiKey && !vertexJson && !vertexApiKey) {
       return NextResponse.json(
         {
           success: false,
-          error: "No API Credentials found. Please configure Gemini API Key or Vertex AI JSON in Settings.",
+          error: "No API Credentials found. Please configure Gemini API Key, Vertex AI JSON, or Vertex AI API Key in Settings.",
         },
         { status: 400 }
       );
@@ -136,12 +139,12 @@ export async function POST(request: NextRequest) {
     let rawResponse = "";
 
     if (vertexJson) {
-      // ─── Vertex AI Strategy ───────────────────────────────────────────────
+      // ─── Vertex AI Strategy (Service Account JSON) ────────────────────────
       try {
         const credentials = JSON.parse(vertexJson);
         const project = credentials.project_id;
         const vertexAI = new VertexAI({ project, location: "us-central1", googleAuthOptions: { credentials } });
-        
+
         const vertexModel = vertexAI.getGenerativeModel({
           model: model || "gemini-1.5-flash-002",
           generationConfig: {
@@ -168,6 +171,32 @@ export async function POST(request: NextRequest) {
       } catch (vErr) {
         console.error("Vertex AI Error:", vErr);
         throw new Error(`Vertex AI failed: ${vErr instanceof Error ? vErr.message : "Unknown error"}`);
+      }
+    } else if (vertexApiKey) {
+      // ─── Vertex AI Express Strategy (API Key) ─────────────────────────────
+      try {
+        const vParts: Array<{ text?: string; inlineData?: { mimeType: string; data: string } }> = [
+          { text: prompt },
+        ];
+        if (image) {
+          const mimeMatch = image.match(/^data:(image\/[a-zA-Z0-9]+);base64,/);
+          if (mimeMatch) {
+            const mimeType = mimeMatch[1];
+            const base64Data = image.replace(/^data:image\/[a-zA-Z0-9]+;base64,/, "");
+            vParts.unshift({ inlineData: { data: base64Data, mimeType } });
+          }
+        }
+
+        const vertexResponse = await vertexExpressGenerate(
+          vertexApiKey,
+          model || "gemini-2.0-flash-001",
+          [{ role: "user", parts: vParts }],
+          { responseMimeType: "application/json", temperature: 0.75 }
+        );
+        rawResponse = vertexResponse.candidates?.[0]?.content?.parts?.[0]?.text || "";
+      } catch (vErr) {
+        console.error("Vertex AI Express Error:", vErr);
+        throw new Error(`Vertex AI Express failed: ${vErr instanceof Error ? vErr.message : "Unknown error"}`);
       }
     } else {
       // ─── AI Studio Strategy ───────────────────────────────────────────────

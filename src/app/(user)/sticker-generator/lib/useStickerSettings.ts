@@ -13,8 +13,8 @@ export interface StickerSettings {
 
 export function useStickerSettings() {
   const [settings, setSettings] = useState<StickerSettings>({
-    analysisModel: "gemini-1.5-flash",
-    imageModel: "gemini-1.5-flash",
+    analysisModel: "gemini-2.0-flash",
+    imageModel: "gemini-2.0-flash",
   });
 
   useEffect(() => {
