@@ -114,7 +114,8 @@ export default function ContentCuratorPage() {
 
       {/* Right Column */}
       <div className="flex flex-col w-full flex-1 relative bg-zinc-50/30 dark:bg-zinc-950/30">
-        {mode === "create" ? (
+        {/* Keep ContentCanvas mounted at all times so local state (edits) is preserved */}
+        <div className={mode !== "create" ? "hidden" : ""}>
           <ContentCanvas
             content={content}
             isGenerating={isGenerating}
@@ -126,13 +127,14 @@ export default function ContentCuratorPage() {
               setLiveContentText(allText);
             }}
           />
-        ) : (
+        </div>
+        <div className={mode !== "competitor" ? "hidden" : ""}>
           <CompetitorView
             myTitle={liveTitle}
             onMyTitleChange={setLiveTitle}
             bankKeywords={keywords}
           />
-        )}
+        </div>
       </div>
     </div>
   );
