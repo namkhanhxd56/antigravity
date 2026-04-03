@@ -121,8 +121,12 @@ export default function ContentCuratorPage() {
             isGenerating={isGenerating}
             bankKeywords={keywords}
             skillName={selectedSkill}
+            titleOverride={liveTitle}
             onContentChange={(live) => {
-              setLiveTitle(live.title);
+              // Only update liveTitle from ContentCanvas when in create mode —
+              // prevents ContentCanvas (always mounted) from overwriting edits
+              // the user makes to My Title in the Competitor tab.
+              if (mode === "create") setLiveTitle(live.title);
               const allText = [live.title, ...live.bullets, live.description, live.searchTerms].join(' ');
               setLiveContentText(allText);
             }}

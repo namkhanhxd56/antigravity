@@ -25,6 +25,8 @@ interface ContentCanvasProps {
   bankKeywords?: string;
   /** Active skill name — used for per-section rewrite context */
   skillName?: string;
+  /** External title override — used to sync edits made in Competitor tab back into Create */
+  titleOverride?: string;
 }
 
 // ─── RewriteBar ───────────────────────────────────────────────────────────────
@@ -95,7 +97,7 @@ function Counter({ current, max }: { current: number; max: number }) {
   );
 }
 
-export default function ContentCanvas({ content, isGenerating, onContentChange, bankKeywords = "", skillName = "Editorial_Pro_V2.md" }: ContentCanvasProps) {
+export default function ContentCanvas({ content, isGenerating, onContentChange, bankKeywords = "", skillName = "Editorial_Pro_V2.md", titleOverride }: ContentCanvasProps) {
   const { limits } = useContentLimits();
   const [title, setTitle] = useState("");
   const [bullets, setBullets] = useState<string[]>(["", "", "", "", ""]);
@@ -176,14 +178,18 @@ export default function ContentCanvas({ content, isGenerating, onContentChange, 
   const descHistory = useUndoRedo("");
   const kwHistory = useUndoRedo("");
 
+  // Use a stable ref for the callback so the effect below doesn't re-fire
+  // every time the inline function reference changes on parent re-render.
+  const onContentChangeRef = useRef(onContentChange);
+  useEffect(() => { onContentChangeRef.current = onContentChange; });
+
   // Fire onContentChange whenever any field changes
   useEffect(() => {
-    if (onContentChange) {
-      setTimeout(() => {
-        onContentChange({ title, bullets, description, searchTerms });
-      }, 0);
-    }
-  }, [title, bullets, description, searchTerms, onContentChange]);
+    setTimeout(() => {
+      onContentChangeRef.current?.({ title, bullets, description, searchTerms });
+    }, 0);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [title, bullets, description, searchTerms]);
 
   // Wrap setters to push to undo history
   const updateTitle = useCallback((val: string) => {
@@ -200,6 +206,21 @@ export default function ContentCanvas({ content, isGenerating, onContentChange, 
     setSearchTerms(val);
     kwHistory.push(val);
   }, [kwHistory]);
+
+  // Sync title edited in Competitor tab back into ContentCanvas
+  const lastTitleOverride = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (
+      titleOverride !== undefined &&
+      titleOverride !== lastTitleOverride.current &&
+      titleOverride !== title
+    ) {
+      lastTitleOverride.current = titleOverride;
+      setTitle(titleOverride);
+      titleHistory.push(titleOverride);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [titleOverride]);
 
   // Reload: fill generic keywords with UNUSED keywords from bank, up to limit
   const handleReloadSearchTerms = useCallback(() => {
