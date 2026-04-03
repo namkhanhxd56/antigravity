@@ -31,6 +31,41 @@ const MODEL_REGISTRY: Omit<ModelConfig, "available">[] = [
     strengths: ["speed", "multi-image", "default"],
   },
   {
+    id: "gemini-1.5-flash",
+    name: "Gemini 1.5 Flash",
+    description: "Standard Flash model",
+    envKey: "GEMINI_API_KEY",
+    strengths: ["speed", "default"],
+  },
+  {
+    id: "gemini-2.5-flash-image",
+    name: "Gemini 2.5 Flash-Image",
+    description: "Latest 2.5 Flash for image generation",
+    envKey: "GEMINI_API_KEY",
+    strengths: ["quality", "latest"],
+  },
+  {
+    id: "gemini-2.5-flash-lite",
+    name: "Gemini 2.5 Flash-Lite",
+    description: "Lightweight 2.5 Flash",
+    envKey: "GEMINI_API_KEY",
+    strengths: ["speed", "lite"],
+  },
+  {
+    id: "gemini-2.5-flash",
+    name: "Gemini 2.5 Flash",
+    description: "Balanced 2.5 Flash",
+    envKey: "GEMINI_API_KEY",
+    strengths: ["performance"],
+  },
+  {
+    id: "gemini-2.5-flash-preview-09-2025",
+    name: "Gemini 2.5 Flash (Preview)",
+    description: "Preview version of 2.5 Flash",
+    envKey: "GEMINI_API_KEY",
+    strengths: ["experimental"],
+  },
+  {
     id: "vertex-gemini-flash",
     name: "Gemini 1.5 Flash (Vertex AI)",
     description: "Enterprise access via GCP Service Account",
@@ -192,6 +227,11 @@ export async function routeGeneration(
       );
 
     case "gemini-flash-image":
+    case "gemini-1.5-flash":
+    case "gemini-2.5-flash-image":
+    case "gemini-2.5-flash-lite":
+    case "gemini-2.5-flash":
+    case "gemini-2.5-flash-preview-09-2025":
       return geminiProvider.generateSticker(
         request,
         apiKey || resolveApiKey("GEMINI_API_KEY")
