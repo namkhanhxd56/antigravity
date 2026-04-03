@@ -7,5 +7,6 @@
 
 // TODO: Export sticker components as they are created
 // export { StickerUploader } from "./StickerUploader";
+export { default as StickerNav } from './StickerNav';
 // export { StickerEditor } from "./StickerEditor";
 // export { StickerPreview } from "./StickerPreview";

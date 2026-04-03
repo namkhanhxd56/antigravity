@@ -43,7 +43,7 @@ export const geminiProvider: AIProvider = {
   ): Promise<StickerAnalysis> {
     const genAI = getGeminiClient(apiKey);
     const model = genAI.getGenerativeModel({
-      model: "gemini-2.5-flash",
+      model: "gemini-1.5-flash",
       systemInstruction: ANALYSIS_SYSTEM_INSTRUCTION,
     });
 
@@ -85,7 +85,7 @@ export const geminiProvider: AIProvider = {
   ): Promise<StickerAnalysis> {
     const genAI = getGeminiClient(apiKey);
     const model = genAI.getGenerativeModel({
-      model: "gemini-2.5-flash",
+      model: "gemini-1.5-flash",
       systemInstruction: REFINE_ANALYSIS_PROMPT,
       generationConfig: {
         temperature: 0.1, // low temp for precision
@@ -129,7 +129,7 @@ export const geminiProvider: AIProvider = {
     try {
       const genAI = getGeminiClient(apiKey);
       const model = genAI.getGenerativeModel({
-        model: "gemini-3.1-flash-image-preview",
+        model: "gemini-1.5-flash", // Use 1.5 flash for images until 2.0 is GA
         systemInstruction: GENERATION_SYSTEM_PROMPT,
         generationConfig: {
           // @ts-expect-error — responseModalities supported by API but not yet typed in SDK

@@ -59,7 +59,7 @@ export const vertexProvider: AIProvider = {
   ): Promise<StickerAnalysis> {
     const vertexAI = getVertexClient(apiKey!);
     const model = vertexAI.getGenerativeModel({
-      model: "gemini-1.5-flash-002",
+      model: "gemini-1.5-flash",
       systemInstruction: {
         role: "system",
         parts: [{ text: ANALYSIS_SYSTEM_INSTRUCTION }],
@@ -111,7 +111,7 @@ export const vertexProvider: AIProvider = {
   ): Promise<StickerAnalysis> {
     const vertexAI = getVertexClient(apiKey!);
     const model = vertexAI.getGenerativeModel({
-      model: "gemini-1.5-flash-002",
+      model: "gemini-1.5-flash",
       systemInstruction: {
         role: "system",
         parts: [{ text: REFINE_ANALYSIS_PROMPT }],
@@ -156,7 +156,7 @@ export const vertexProvider: AIProvider = {
     try {
       const vertexAI = getVertexClient(apiKey!);
       const model = vertexAI.getGenerativeModel({
-        model: "gemini-1.5-flash-002", // Note: imagen-3 is separate in Vertex AI, but we use multibimodal gemini here
+        model: "gemini-1.5-flash", // Note: standard flash supports multimodal
         systemInstruction: {
           role: "system",
           parts: [{ text: GENERATION_SYSTEM_PROMPT }],

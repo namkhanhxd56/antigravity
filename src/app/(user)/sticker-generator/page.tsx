@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
-import TopNav from "@/components/shared/TopNav";
 import SourceSidebar from "./components/SourceSidebar";
 import AnalyticsPanel from "./components/AnalyticsPanel";
 import ResultGrid from "./components/ResultGrid";
+import StickerNav from "./components/StickerNav";
 import { STICKER_MASTER_RULES } from "./lib/rules";
 import { fileToBase64 } from "@/lib/utils";
 import { getStoredApiKey } from "./lib/client-storage";
@@ -299,7 +299,7 @@ export default function StickerGeneratorPage() {
 
   return (
     <div className="flex flex-col h-screen">
-      <TopNav />
+      <StickerNav />
       <main className="flex flex-1 overflow-hidden">
         <SourceSidebar
           uploadedImageUrl={formState.uploadedImageUrl}
