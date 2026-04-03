@@ -168,6 +168,7 @@ export default function ContentCanvas({ content, isGenerating, onContentChange, 
   // openRewriteBar: which section has the bar open. bullet-N for bullets.
   const [openRewriteBar, setOpenRewriteBar] = useState<string | null>(null);
   const [rewritingSection, setRewritingSection] = useState<string | null>(null);
+  const [rewriteError, setRewriteError] = useState<string | null>(null);
 
   const toggleRewriteBar = (sectionKey: string) => {
     setOpenRewriteBar((prev) => (prev === sectionKey ? null : sectionKey));
@@ -344,9 +345,13 @@ export default function ContentCanvas({ content, isGenerating, onContentChange, 
         if (section === "title") updateTitle(data.rewritten);
         else if (section === "description") updateDescription(data.rewritten);
         else if (section === "bullet" && bulletIndex !== undefined) updateBullet(bulletIndex, data.rewritten);
+      } else if (!data.success) {
+        setRewriteError(data.error ?? "Rewrite failed. Please try again.");
+        setTimeout(() => setRewriteError(null), 4000);
       }
     } catch {
-      // silently fail — user can retry
+      setRewriteError("Failed to connect. Check your API key and try again.");
+      setTimeout(() => setRewriteError(null), 4000);
     } finally {
       setRewritingSection(null);
     }
@@ -361,6 +366,14 @@ export default function ContentCanvas({ content, isGenerating, onContentChange, 
 
   return (
     <div className="flex flex-col p-6 md:p-8">
+
+      {/* Rewrite error toast */}
+      {rewriteError && (
+        <div className="mb-4 flex items-center gap-2 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 px-4 py-2.5 text-[12px] text-red-700 dark:text-red-400 animate-in fade-in duration-200">
+          <span className="material-symbols-outlined text-[15px]">error</span>
+          {rewriteError}
+        </div>
+      )}
 
       {/* Header */}
       <div className="mb-8 flex items-center justify-between relative">
