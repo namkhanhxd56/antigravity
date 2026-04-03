@@ -71,6 +71,7 @@ function HighlightText({
 
 interface CompetitorViewProps {
   myTitle: string;
+  onMyTitleChange?: (val: string) => void;
   bankKeywords: string;
 }
 
@@ -82,7 +83,7 @@ function stripVolume(line: string): string {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export default function CompetitorView({ myTitle, bankKeywords }: CompetitorViewProps) {
+export default function CompetitorView({ myTitle, onMyTitleChange, bankKeywords }: CompetitorViewProps) {
   const [competitors, setCompetitors] = useState<string[]>([""]);
 
   const keywordsList = useMemo(
@@ -122,7 +123,7 @@ export default function CompetitorView({ myTitle, bankKeywords }: CompetitorView
         </p>
       </div>
 
-      {/* My Title — read-only */}
+      {/* My Title — editable */}
       <div className="mb-6">
         <div className="mb-2 flex items-center gap-2">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-[#fed7aa] px-2.5 py-0.5 text-[11px] font-semibold text-[#b45309] tracking-wide">
@@ -130,13 +131,19 @@ export default function CompetitorView({ myTitle, bankKeywords }: CompetitorView
             MY TITLE
           </span>
         </div>
-        <div className="min-h-[52px] w-full rounded-lg bg-zinc-100 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 px-4 py-3 text-[14px] font-medium text-zinc-800 dark:text-zinc-200 leading-relaxed">
-          <HighlightText
-            text={myTitle}
-            keywords={keywordsList}
-            placeholder="No title yet — generate content in Create My Content first."
-          />
-        </div>
+        <HighlightTextarea
+          value={myTitle}
+          onChange={(val) => onMyTitleChange?.(val)}
+          keywords={keywordsList}
+          placeholder="No title yet — generate content in Create My Content first."
+          className="w-full rounded-lg bg-zinc-100 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 focus-within:border-[#EA580C] focus-within:ring-1 focus-within:ring-[#EA580C]"
+          textClassName="text-[14px] font-medium text-zinc-800 dark:text-zinc-200"
+          paddingClassName="px-4 py-3"
+          minHeight="52px"
+        />
+        {myTitle && keywordsList.length > 0 && (
+          <KeywordCoverage text={myTitle} keywords={keywordsList} />
+        )}
       </div>
 
       {/* Divider */}

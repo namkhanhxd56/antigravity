@@ -194,7 +194,31 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
             </div>
           )}
 
-          {/* 1. Content Limits (Reordered to top) */}
+          {/* 1. Appearance */}
+          <section className="space-y-4">
+            <h3 className="text-[11px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-2">
+              <span className="material-symbols-outlined text-[16px]">palette</span>
+              Appearance
+            </h3>
+            <div className="flex items-center justify-between p-4 bg-zinc-100 dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800">
+              <div className="flex items-center gap-3">
+                <span className="material-symbols-outlined text-zinc-400">{theme === 'dark' ? 'dark_mode' : 'light_mode'}</span>
+                <span className="text-xs font-bold text-zinc-900 dark:text-white">Dark Mode</span>
+              </div>
+              {mounted && (
+                <button
+                  role="switch"
+                  aria-checked={theme === "dark"}
+                  onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                  className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors focus:outline-none ${theme === "dark" ? "bg-primary" : "bg-zinc-300"}`}
+                >
+                  <span className={`inline-block h-3.5 w-3.5 rounded-full bg-white shadow transition-transform ${theme === "dark" ? "translate-x-5.5" : "translate-x-1"}`} />
+                </button>
+              )}
+            </div>
+          </section>
+
+          {/* 2. Content Limits */}
           <section className="space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-[11px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-2">
@@ -309,29 +333,6 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
             </div>
           </section>
 
-          {/* 4. Appearance */}
-          <section className="space-y-4">
-            <h3 className="text-[11px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-2">
-              <span className="material-symbols-outlined text-[16px]">palette</span>
-              Appearance
-            </h3>
-            <div className="flex items-center justify-between p-4 bg-zinc-100 dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800">
-              <div className="flex items-center gap-3">
-                <span className="material-symbols-outlined text-zinc-400">{theme === 'dark' ? 'dark_mode' : 'light_mode'}</span>
-                <span className="text-xs font-bold text-zinc-900 dark:text-white">Dark Mode</span>
-              </div>
-              {mounted && (
-                <button
-                  role="switch"
-                  aria-checked={theme === "dark"}
-                  onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                  className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors focus:outline-none ${theme === "dark" ? "bg-primary" : "bg-zinc-300"}`}
-                >
-                  <span className={`inline-block h-3.5 w-3.5 rounded-full bg-white shadow transition-transform ${theme === "dark" ? "translate-x-5.5" : "translate-x-1"}`} />
-                </button>
-              )}
-            </div>
-          </section>
         </div>
 
         <footer className="p-6 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900/50">

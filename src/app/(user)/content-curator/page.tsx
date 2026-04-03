@@ -129,6 +129,7 @@ export default function ContentCuratorPage() {
         ) : (
           <CompetitorView
             myTitle={liveTitle}
+            onMyTitleChange={setLiveTitle}
             bankKeywords={keywords}
           />
         )}
