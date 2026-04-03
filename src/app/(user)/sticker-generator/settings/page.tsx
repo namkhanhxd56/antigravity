@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { setStickerApiKey, setStickerVertexApiKey, setStickerVertexJson } from "../lib/client-storage";
 
 interface ProviderInfo {
   key: string;
@@ -61,6 +62,12 @@ interface KeyStatus {
   preview: string;
 }
 
+function mirrorToLocalStorage(providerKey: string, value: string) {
+  if (providerKey === "STICKER_GEMINI_API_KEY") setStickerApiKey(value);
+  else if (providerKey === "STICKER_VERTEX_API_KEY") setStickerVertexApiKey(value);
+  else if (providerKey === "STICKER_VERTEX_AI_JSON") setStickerVertexJson(value);
+}
+
 export default function StickerSettingsPage() {
   const [keyStatus, setKeyStatus] = useState<Record<string, KeyStatus>>({});
   const [inputs, setInputs] = useState<Record<string, string>>({});
@@ -98,6 +105,7 @@ export default function StickerSettingsPage() {
         if (data.success) {
           setKeyStatus(data.status);
           setInputs((prev) => ({ ...prev, [providerKey]: "" }));
+          mirrorToLocalStorage(providerKey, value.trim());
           setMessage({ type: "success", text: "API key saved successfully!" });
         } else {
           setMessage({
@@ -131,6 +139,7 @@ export default function StickerSettingsPage() {
       const data = await res.json();
       if (data.success) {
         setKeyStatus(data.status);
+        mirrorToLocalStorage(providerKey, "");
         setMessage({ type: "success", text: "API key removed." });
       }
     } catch {
