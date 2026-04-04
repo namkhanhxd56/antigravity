@@ -7,7 +7,7 @@ import ResultGrid from "./components/ResultGrid";
 import StickerNav from "./components/StickerNav";
 import { STICKER_MASTER_RULES } from "./lib/rules";
 import { fileToBase64 } from "@/lib/utils";
-import { getStickerAnalysisModel, getStickerActiveKey, getStickerVertexApiKey } from "./lib/client-storage";
+import { getStickerAnalysisModel, getStickerActiveKey, getStickerVertexApiKey, getAllStickerLocalKeys } from "./lib/client-storage";
 import type {
   StickerFormState,
   StickerResult,
@@ -82,6 +82,37 @@ export default function StickerGeneratorPage() {
         }
       })
       .catch((err) => console.error("Failed to load models:", err));
+  }, []);
+
+  // After cold start the server /tmp is wiped — re-populate it from localStorage
+  // so Settings UI shows correct status and model availability flags are correct.
+  useEffect(() => {
+    const localKeys = getAllStickerLocalKeys();
+    if (Object.keys(localKeys).length === 0) return;
+
+    fetch("/api/settings")
+      .then((res) => res.json())
+      .then(async (data) => {
+        const status = data.status ?? {};
+        const missing = Object.entries(localKeys).filter(
+          ([k]) => !status[k]?.configured
+        );
+        if (missing.length === 0) return;
+
+        for (const [key, value] of missing) {
+          await fetch("/api/settings", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ key, value }),
+          });
+        }
+
+        // Refetch model list so available flags reflect restored keys
+        const modelsRes = await fetch("/sticker-generator/api/generate");
+        const modelsData = await modelsRes.json();
+        if (modelsData.models) setAvailableModels(modelsData.models);
+      })
+      .catch(() => {}); // silent — header-based auth still works as fallback
   }, []);
 
   // --- Form State Handlers ---

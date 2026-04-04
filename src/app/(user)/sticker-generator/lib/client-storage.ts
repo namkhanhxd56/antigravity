@@ -94,6 +94,19 @@ export function setStickerModel(model: string): void {
   localStorage.setItem(STICKER_MODEL_KEY, model);
 }
 
+/** Returns all sticker keys currently in localStorage, keyed by server ProviderKey name. */
+export function getAllStickerLocalKeys(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  const result: Record<string, string> = {};
+  const vertexJson = getStickerVertexJson();
+  const vertexKey  = getStickerVertexApiKey();
+  const geminiKey  = getStickerApiKey();
+  if (vertexJson) result["STICKER_VERTEX_AI_JSON"] = vertexJson;
+  if (vertexKey)  result["STICKER_VERTEX_API_KEY"] = vertexKey;
+  if (geminiKey)  result["STICKER_GEMINI_API_KEY"] = geminiKey;
+  return result;
+}
+
 // Backward compatibility with older components
 export const getStoredApiKey = getStickerApiKey;
 export const setStoredApiKey = setStickerApiKey;
