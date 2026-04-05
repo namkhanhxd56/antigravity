@@ -7,7 +7,8 @@ import ResultGrid from "./components/ResultGrid";
 import StickerNav from "./components/StickerNav";
 import { STICKER_MASTER_RULES } from "./lib/rules";
 import { fileToBase64 } from "@/lib/utils";
-import { getStickerAnalysisModel, getStickerActiveKey, getStickerVertexApiKey } from "./lib/client-storage";
+import { getStickerAnalysisModel } from "./lib/client-storage";
+import { getActiveStickerKey } from "./lib/sticker-keys";
 import type {
   StickerFormState,
   StickerResult,
@@ -120,12 +121,13 @@ export default function StickerGeneratorPage() {
       const base64 = await fileToBase64(file);
       const mimeType = file.type || "image/png";
 
+      const active = getActiveStickerKey();
       const response = await fetch("/sticker-generator/api/analyze", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-sticker-api-key": getStickerActiveKey() ?? "",
-          "x-sticker-vertex-key": getStickerVertexApiKey() ?? "",
+          "x-sticker-key": active?.key ?? "",
+          "x-sticker-key-type": active?.type ?? "",
         },
         body: JSON.stringify({
           imageBase64: base64,
@@ -168,12 +170,13 @@ export default function StickerGeneratorPage() {
     setIsRefining(true);
 
     try {
+      const active = getActiveStickerKey();
       const response = await fetch("/sticker-generator/api/refine", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-sticker-api-key": getStickerActiveKey() ?? "",
-          "x-sticker-vertex-key": getStickerVertexApiKey() ?? "",
+          "x-sticker-key": active?.key ?? "",
+          "x-sticker-key-type": active?.type ?? "",
         },
         body: JSON.stringify({
           currentState: formState,
@@ -217,12 +220,13 @@ export default function StickerGeneratorPage() {
     const prompt = buildGenerationPrompt(formState);
 
     try {
+      const active = getActiveStickerKey();
       const response = await fetch("/sticker-generator/api/generate", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-sticker-api-key": getStickerActiveKey() ?? "",
-          "x-sticker-vertex-key": getStickerVertexApiKey() ?? "",
+          "x-sticker-key": active?.key ?? "",
+          "x-sticker-key-type": active?.type ?? "",
         },
         body: JSON.stringify({
           prompt,

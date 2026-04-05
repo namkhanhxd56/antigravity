@@ -1,16 +1,26 @@
 /**
  * API Route: POST /sticker-generator/api/generate
  *
- * Key priority (sticker-specific first, then global fallback):
- *   STICKER_VERTEX_AI_JSON > STICKER_VERTEX_API_KEY > STICKER_GEMINI_API_KEY
- *   > VERTEX_AI_JSON > GEMINI_API_KEY
+ * Credentials (in priority order):
+ *   1. x-sticker-key + x-sticker-key-type headers (per-browser localStorage key)
+ *   2. process.env STICKER_* / VERTEX_AI_JSON / GEMINI_API_KEY (admin/shared, intentional)
  *
- * Model is sent in request body (not header) to avoid stale closure issues.
+ * No server-side key storage is read — keys never leak across browsers.
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { getAvailableModels, suggestModel, routeGeneration } from "../../services/router.service";
 import type { ModelId } from "../../lib/types";
+import type { StickerKeyType } from "../../lib/sticker-keys";
+
+function resolveEnvCredentials(): { key: string; type: StickerKeyType } | null {
+  if (process.env.STICKER_VERTEX_AI_JSON) return { key: process.env.STICKER_VERTEX_AI_JSON, type: "vertex-json" };
+  if (process.env.STICKER_VERTEX_API_KEY) return { key: process.env.STICKER_VERTEX_API_KEY, type: "vertex" };
+  if (process.env.STICKER_GEMINI_API_KEY) return { key: process.env.STICKER_GEMINI_API_KEY, type: "gemini" };
+  if (process.env.VERTEX_AI_JSON) return { key: process.env.VERTEX_AI_JSON, type: "vertex-json" };
+  if (process.env.GEMINI_API_KEY) return { key: process.env.GEMINI_API_KEY, type: "gemini" };
+  return null;
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,26 +34,18 @@ export async function POST(request: NextRequest) {
     } = body;
 
     if (!prompt) {
-      return NextResponse.json(
-        { error: "prompt is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "prompt is required" }, { status: 400 });
     }
 
-    // ─── Resolve credentials ─────────────────────────────────────────────────
-    // Priority: browser header (per-user) → process.env (admin/shared intentional)
-    // Stored keys (api-keys.json / /tmp) are intentionally excluded so keys
-    // are never shared across browsers.
-    const resolvedKey =
-      request.headers.get("x-sticker-api-key") ||
-      process.env.STICKER_VERTEX_AI_JSON ||
-      process.env.STICKER_VERTEX_API_KEY ||
-      process.env.STICKER_GEMINI_API_KEY ||
-      process.env.VERTEX_AI_JSON ||
-      process.env.GEMINI_API_KEY ||
-      undefined;
+    const headerKey = request.headers.get("x-sticker-key");
+    const headerType = request.headers.get("x-sticker-key-type") as StickerKeyType | null;
 
-    if (!resolvedKey) {
+    const creds =
+      headerKey && headerType
+        ? { key: headerKey, type: headerType }
+        : resolveEnvCredentials();
+
+    if (!creds) {
       return NextResponse.json(
         {
           success: false,
@@ -53,7 +55,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ─── Resolve model ──────────────────────────────────────────────────────
+    // Resolve model
     let modelId: ModelId;
     if (selectedModel === "auto") {
       modelId = suggestModel({ quote }, !!referenceImage);
@@ -61,13 +63,10 @@ export async function POST(request: NextRequest) {
       modelId = selectedModel as ModelId;
     }
 
-    // ─── Route generation ───────────────────────────────────────────────────
-    const vertexApiKeyHint = request.headers.get("x-sticker-vertex-key") || undefined;
-
     const result = await routeGeneration(
       { prompt, referenceImage, variations, selectedModel: modelId },
-      resolvedKey,
-      vertexApiKeyHint
+      creds.key,
+      creds.type
     );
 
     return NextResponse.json({

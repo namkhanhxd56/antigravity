@@ -7,7 +7,7 @@ import { useUndoRedo } from "../lib/useUndoRedo";
 import TextToolbar from "./TextToolbar";
 import HighlightTextarea from "./HighlightTextarea";
 import { useMemo } from "react";
-import { getCuratorApiKey, getCuratorVertexApiKey, getCuratorVertexJson } from "../lib/client-storage";
+import { getCuratorHeaders } from "../lib/curator-keys";
 import { getStoredModel } from "./ContentCuratorNav";
 import ColumnCustomizer, { buildDefaultColumns, type Column } from "./ColumnCustomizer";
 
@@ -331,13 +331,14 @@ export default function ContentCanvas({ content, isGenerating, onContentChange, 
           otherSections: { title, description },
         },
       };
+      const { geminiKey, vertexKey, vertexJson } = getCuratorHeaders();
       const res = await fetch("/content-curator/api/rewrite", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-gemini-api-key": getCuratorApiKey() ?? "",
-          "x-curator-vertex-key": getCuratorVertexApiKey() ?? "",
-          "x-curator-vertex-json": getCuratorVertexJson() ?? "",
+          "x-gemini-api-key": geminiKey ?? "",
+          "x-curator-vertex-key": vertexKey ?? "",
+          "x-curator-vertex-json": vertexJson ?? "",
         },
         body: JSON.stringify(body),
       });
