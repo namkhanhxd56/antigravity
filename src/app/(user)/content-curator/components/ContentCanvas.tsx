@@ -7,7 +7,7 @@ import { useUndoRedo } from "../lib/useUndoRedo";
 import TextToolbar from "./TextToolbar";
 import HighlightTextarea from "./HighlightTextarea";
 import { useMemo } from "react";
-import { getCuratorApiKey } from "../lib/client-storage";
+import { getCuratorApiKey, getCuratorVertexApiKey, getCuratorVertexJson } from "../lib/client-storage";
 import { getStoredModel } from "./ContentCuratorNav";
 import ColumnCustomizer, { buildDefaultColumns, type Column } from "./ColumnCustomizer";
 
@@ -318,7 +318,6 @@ export default function ContentCanvas({ content, isGenerating, onContentChange, 
       limits.description;
 
     try {
-      const apiKey = getCuratorApiKey() || "";
       const body: RewriteRequest = {
         section,
         bulletIndex,
@@ -336,7 +335,9 @@ export default function ContentCanvas({ content, isGenerating, onContentChange, 
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-gemini-api-key": apiKey,
+          "x-gemini-api-key": getCuratorApiKey() ?? "",
+          "x-curator-vertex-key": getCuratorVertexApiKey() ?? "",
+          "x-curator-vertex-json": getCuratorVertexJson() ?? "",
         },
         body: JSON.stringify(body),
       });

@@ -15,7 +15,6 @@ import fs from "fs";
 import path from "path";
 import { buildGeneratePrompt, type LimitsConfig } from "../../lib/promptBuilder";
 import type { GenerateRequest } from "../../lib/types";
-import { readStoredKeys } from "@/lib/key-storage";
 import { vertexExpressGenerate } from "@/lib/vertex-express";
 
 const BASE_DIR = path.join(
@@ -103,19 +102,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const storedKeys = readStoredKeys();
-    const curatorVertexJson = storedKeys.CURATOR_VERTEX_AI_JSON || process.env.CURATOR_VERTEX_AI_JSON;
-    const globalVertexJson = storedKeys.VERTEX_AI_JSON || process.env.VERTEX_AI_JSON;
-    const vertexJson = curatorVertexJson || globalVertexJson;
+    // ─── Resolve credentials ─────────────────────────────────────────────────
+    // Priority: browser headers (per-user) → process.env (admin/shared intentional)
+    // Stored keys (api-keys.json / /tmp) are intentionally excluded so keys
+    // are never shared across browsers.
+    const vertexJson =
+      request.headers.get("x-curator-vertex-json") ||
+      process.env.CURATOR_VERTEX_AI_JSON ||
+      process.env.VERTEX_AI_JSON ||
+      null;
 
-    const vertexApiKey = storedKeys.CURATOR_VERTEX_API_KEY || process.env.CURATOR_VERTEX_API_KEY;
+    const vertexApiKey =
+      request.headers.get("x-curator-vertex-key") ||
+      process.env.CURATOR_VERTEX_API_KEY ||
+      null;
 
     const apiKey =
       request.headers.get("x-gemini-api-key") ||
-      storedKeys.CURATOR_GEMINI_API_KEY ||
       process.env.CURATOR_GEMINI_API_KEY ||
-      storedKeys.GEMINI_API_KEY ||
-      process.env.GEMINI_API_KEY;
+      process.env.GEMINI_API_KEY ||
+      null;
 
     if (!apiKey && !vertexJson && !vertexApiKey) {
       return NextResponse.json(

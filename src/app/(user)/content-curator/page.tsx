@@ -6,7 +6,7 @@ import SkillConfig from "./components/SkillConfig";
 import KeywordBank from "./components/KeywordBank";
 import ContentCanvas from "./components/ContentCanvas";
 import CompetitorView from "./components/CompetitorView";
-import { getCuratorApiKey } from "./lib/client-storage";
+import { getCuratorApiKey, getCuratorVertexApiKey, getCuratorVertexJson } from "./lib/client-storage";
 import { getStoredModel } from "./components/ContentCuratorNav";
 import type { ContentListing } from "./lib/types";
 import { useCuratorMode } from "./lib/ModeContext";
@@ -43,12 +43,13 @@ export default function ContentCuratorPage() {
     setError(null);
 
     try {
-      const apiKey = getCuratorApiKey() || "";
       const response = await fetch("/content-curator/api/generate", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-gemini-api-key": apiKey,
+          "x-gemini-api-key": getCuratorApiKey() ?? "",
+          "x-curator-vertex-key": getCuratorVertexApiKey() ?? "",
+          "x-curator-vertex-json": getCuratorVertexJson() ?? "",
         },
         body: JSON.stringify({
           keywords,

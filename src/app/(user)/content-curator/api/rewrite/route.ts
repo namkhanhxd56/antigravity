@@ -13,7 +13,6 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import fs from "fs";
 import path from "path";
 import type { RewriteRequest } from "../../lib/types";
-import { readStoredKeys } from "@/lib/key-storage";
 import { vertexExpressGenerate } from "@/lib/vertex-express";
 
 const BASE_DIR = path.join(
@@ -90,15 +89,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const storedKeys = readStoredKeys();
+    // ─── Resolve credentials ─────────────────────────────────────────────────
+    // Priority: browser headers (per-user) → process.env (admin/shared intentional)
+    // Stored keys (api-keys.json / /tmp) are intentionally excluded so keys
+    // are never shared across browsers.
     const vertexApiKey =
-      storedKeys.CURATOR_VERTEX_API_KEY || process.env.CURATOR_VERTEX_API_KEY;
+      request.headers.get("x-curator-vertex-key") ||
+      process.env.CURATOR_VERTEX_API_KEY ||
+      null;
     const apiKey =
       request.headers.get("x-gemini-api-key") ||
-      storedKeys.CURATOR_GEMINI_API_KEY ||
       process.env.CURATOR_GEMINI_API_KEY ||
-      storedKeys.GEMINI_API_KEY ||
-      process.env.GEMINI_API_KEY;
+      process.env.GEMINI_API_KEY ||
+      null;
 
     if (!apiKey && !vertexApiKey) {
       return NextResponse.json(

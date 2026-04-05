@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { getCuratorModel, setCuratorModel } from "../lib/client-storage";
+import { getCuratorModel, setCuratorModel, setCuratorVertexApiKey, setCuratorVertexJson } from "../lib/client-storage";
 import { useContentLimits, type ContentLimits } from "../lib/useContentLimits";
 import { useTheme } from "next-themes";
 import { GEMINI_MODELS } from "./ContentCuratorNav";
@@ -100,6 +100,12 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
     setTimeout(() => setMessage(null), 2000);
   };
 
+  const mirrorToLocalStorage = useCallback((providerKey: string, value: string) => {
+    if (providerKey === "CURATOR_VERTEX_API_KEY") setCuratorVertexApiKey(value);
+    else if (providerKey === "CURATOR_VERTEX_AI_JSON") setCuratorVertexJson(value);
+    // CURATOR_GEMINI_API_KEY is already handled via getCuratorApiKey (existing flow)
+  }, []);
+
   const handleSaveKey = async (providerKey: string) => {
     const value = inputs[providerKey];
     if (!value?.trim()) return;
@@ -115,6 +121,7 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
       if (data.success) {
         setKeyStatus(data.status);
         setInputs((prev) => ({ ...prev, [providerKey]: "" }));
+        mirrorToLocalStorage(providerKey, value.trim());
         setMessage({ type: "success", text: "API key saved!" });
       }
     } catch {
@@ -137,6 +144,7 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
       const data = await res.json();
       if (data.success) {
         setKeyStatus(data.status);
+        mirrorToLocalStorage(providerKey, "");
         setMessage({ type: "success", text: "API key removed." });
       }
     } finally {

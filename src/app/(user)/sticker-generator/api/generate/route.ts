@@ -9,7 +9,6 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { readStoredKeys } from "@/lib/key-storage";
 import { getAvailableModels, suggestModel, routeGeneration } from "../../services/router.service";
 import type { ModelId } from "../../lib/types";
 
@@ -31,20 +30,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ─── Resolve credentials — client header first, then server-side fallback ──
-    const storedKeys = readStoredKeys();
-
+    // ─── Resolve credentials ─────────────────────────────────────────────────
+    // Priority: browser header (per-user) → process.env (admin/shared intentional)
+    // Stored keys (api-keys.json / /tmp) are intentionally excluded so keys
+    // are never shared across browsers.
     const resolvedKey =
       request.headers.get("x-sticker-api-key") ||
-      storedKeys.STICKER_VERTEX_AI_JSON ||
       process.env.STICKER_VERTEX_AI_JSON ||
-      storedKeys.STICKER_VERTEX_API_KEY ||
       process.env.STICKER_VERTEX_API_KEY ||
-      storedKeys.STICKER_GEMINI_API_KEY ||
       process.env.STICKER_GEMINI_API_KEY ||
-      storedKeys.VERTEX_AI_JSON ||
       process.env.VERTEX_AI_JSON ||
-      storedKeys.GEMINI_API_KEY ||
       process.env.GEMINI_API_KEY ||
       undefined;
 
