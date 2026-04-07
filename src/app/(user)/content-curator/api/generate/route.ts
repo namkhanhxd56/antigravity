@@ -133,10 +133,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // skillContent từ client (user-imported skill lưu trong localStorage) được ưu tiên
+    // hơn đọc từ disk — giúp hoạt động trên Vercel (filesystem read-only)
+    const resolvedSkillContent =
+      body.skillContent ?? readSkillFile(skillName || "Editorial_Pro_V2.md");
+
     const prompt = buildGeneratePrompt({
       limits: readLimits(),
       baseRules: readBaseRules(),
-      skillContent: readSkillFile(skillName || "Editorial_Pro_V2.md"),
+      skillContent: resolvedSkillContent,
       keywords,
       notes,
       occasion,

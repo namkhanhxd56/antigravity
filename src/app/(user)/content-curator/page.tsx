@@ -8,6 +8,7 @@ import ContentCanvas from "./components/ContentCanvas";
 import CompetitorView from "./components/CompetitorView";
 import { getCuratorHeaders } from "./lib/curator-keys";
 import { getStoredModel } from "./components/ContentCuratorNav";
+import { getLocalSkillContent } from "./components/SkillConfig";
 import type { ContentListing } from "./lib/types";
 import { useCuratorMode } from "./lib/ModeContext";
 
@@ -59,6 +60,11 @@ export default function ContentCuratorPage() {
           ...(enableOccasion && { occasion }),
           ...(notes.trim() && { notes: notes.trim() }),
           ...(productImage && { image: productImage }),
+          // Nếu skill được import từ browser (lưu localStorage), gửi content trực tiếp
+          // để server không cần đọc từ disk (Vercel filesystem read-only)
+          ...(getLocalSkillContent(selectedSkill) !== null && {
+            skillContent: getLocalSkillContent(selectedSkill)!,
+          }),
         }),
       });
 

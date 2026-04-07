@@ -18,6 +18,12 @@ export interface GenerateRequest {
   occasion?: string;
   /** Base64 product image */
   image?: string;
+  /**
+   * Skill content sent directly from client (for user-imported skills stored in
+   * localStorage). When present, server uses this instead of reading from disk.
+   * This allows custom skills to work on Vercel where the filesystem is read-only.
+   */
+  skillContent?: string;
 }
 
 /** Request body for the per-section rewrite API */

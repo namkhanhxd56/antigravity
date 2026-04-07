@@ -4,6 +4,22 @@ import { useState, useRef, useEffect } from "react";
 import { DEFAULT_SKILL_OPTIONS, type SkillOption } from "../lib/types";
 import CustomizationContent from "./CustomizationContent";
 
+const LOCAL_SKILLS_KEY = "curator_local_skills";
+
+/** Lấy map tất cả local skills từ localStorage: { "filename.md": "content..." } */
+export function getLocalSkills(): Record<string, string> {
+  try {
+    return JSON.parse(localStorage.getItem(LOCAL_SKILLS_KEY) ?? "{}");
+  } catch {
+    return {};
+  }
+}
+
+/** Lấy nội dung của một skill từ localStorage (null nếu không có) */
+export function getLocalSkillContent(skillName: string): string | null {
+  return getLocalSkills()[skillName] ?? null;
+}
+
 interface SkillConfigProps {
   selectedSkill: string;
   onSkillChange: (skill: string) => void;
@@ -38,20 +54,32 @@ export default function SkillConfig({
   const [skillOptions, setSkillOptions] = useState<SkillOption[]>(DEFAULT_SKILL_OPTIONS);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  /** Merge server skills với local skills từ localStorage */
+  const buildSkillOptions = (serverSkills: SkillOption[]): SkillOption[] => {
+    const localKeys = Object.keys(getLocalSkills());
+    const localOptions: SkillOption[] = localKeys
+      .filter((k) => !serverSkills.find((s) => s.value === k))
+      .map((k) => ({
+        value: k,
+        label: k.replace(/\.md$/, "").replace(/_/g, " "),
+      }));
+    return [...serverSkills, ...localOptions];
+  };
+
   const fetchSkills = async () => {
     try {
       const res = await fetch('/content-curator/api/skills');
       const data = await res.json();
-      if (data.skills?.length) {
-        setSkillOptions(data.skills);
-      }
+      const serverSkills: SkillOption[] = data.skills?.length ? data.skills : DEFAULT_SKILL_OPTIONS;
+      setSkillOptions(buildSkillOptions(serverSkills));
     } catch {
-      // keep defaults
+      setSkillOptions(buildSkillOptions(DEFAULT_SKILL_OPTIONS));
     }
   };
 
   useEffect(() => {
     fetchSkills();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleReload = async () => {
@@ -74,23 +102,22 @@ export default function SkillConfig({
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    
-    const formData = new FormData();
-    formData.append("file", file);
 
     try {
-      const res = await fetch('/content-curator/api/upload-skill', {
-        method: 'POST',
-        body: formData
-      });
-      if (res.ok) {
-        await fetchSkills();
-        onSkillChange(file.name);
-      }
+      // Đọc file content ngay trên browser — không upload lên server
+      // (Vercel filesystem là read-only nên upload sẽ thất bại)
+      const content = await file.text();
+      const localSkills = getLocalSkills();
+      localSkills[file.name] = content;
+      localStorage.setItem(LOCAL_SKILLS_KEY, JSON.stringify(localSkills));
+
+      // Cập nhật dropdown + chọn skill vừa import
+      await fetchSkills();
+      onSkillChange(file.name);
     } catch {
-      console.error("Upload failed");
+      console.error("Import failed");
     }
-    
+
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
