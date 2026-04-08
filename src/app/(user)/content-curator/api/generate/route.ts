@@ -17,9 +17,6 @@ import { buildGeneratePrompt, type LimitsConfig } from "../../lib/promptBuilder"
 import type { GenerateRequest } from "../../lib/types";
 import { vertexExpressGenerate } from "@/lib/vertex-express";
 
-const BASE_DIR = path.join(
-  process.cwd(), "src", "app", "(user)", "content-curator", "skills", "_base"
-);
 const SKILLS_DIR = path.join(
   process.cwd(), "src", "app", "(user)", "content-curator", "skills"
 );
@@ -32,33 +29,11 @@ const DEFAULT_LIMITS: LimitsConfig = {
   searchTerms: 250,
 };
 
-// ─── Tầng 1: Limits (đọc từ file mỗi request) ────────────────────────────────
+// ─── Tầng 1: Limits ───────────────────────────────────────────────────────────
+// Base rules đã được merge vào từng skill .md — không cần đọc _base/ nữa
 
 function readLimits(): LimitsConfig {
-  try {
-    const filePath = path.join(BASE_DIR, "limits.json");
-    if (fs.existsSync(filePath)) {
-      const raw = fs.readFileSync(filePath, "utf-8");
-      return { ...DEFAULT_LIMITS, ...JSON.parse(raw) };
-    }
-  } catch {
-    // fall through to defaults
-  }
   return DEFAULT_LIMITS;
-}
-
-// ─── Tầng 1.5: Base Rules (đọc từ file mỗi request) ──────────────────────────
-
-function readBaseRules(): string {
-  try {
-    const filePath = path.join(BASE_DIR, "base_rules.md");
-    if (fs.existsSync(filePath)) {
-      return fs.readFileSync(filePath, "utf-8");
-    }
-  } catch {
-    // fall through
-  }
-  return "";
 }
 
 // ─── Tầng 2: Product Skill (lazy cache — reset bằng clearSkillCache) ─────────
@@ -140,7 +115,6 @@ export async function POST(request: NextRequest) {
 
     const prompt = buildGeneratePrompt({
       limits: readLimits(),
-      baseRules: readBaseRules(),
       skillContent: resolvedSkillContent,
       keywords,
       notes,

@@ -8,13 +8,11 @@ export interface LimitsConfig {
   searchTerms: number;
 }
 
-/** Input cho buildGeneratePrompt — 2 tầng + context người dùng */
+/** Input cho buildGeneratePrompt — skill + context người dùng */
 export interface PromptLayers {
-  /** Tầng 1: limits từ limits.json */
+  /** Limits — title/bullets/description char counts */
   limits: LimitsConfig;
-  /** Tầng 1.5: base rules chung cho mọi product */
-  baseRules?: string;
-  /** Tầng 2: product skill .md — lazy cache, reset khi user reload/upload */
+  /** Skill .md content — bao gồm cả base rules (đã merge vào file) */
   skillContent: string;
   /** Context từ user */
   keywords: string;
@@ -29,7 +27,7 @@ export interface PromptLayers {
  * Thứ tự: Limits → Skill → Keywords → Occasion → Notes → Task
  */
 export function buildGeneratePrompt(layers: PromptLayers): string {
-  const { limits, baseRules, skillContent, keywords, notes, occasion } = layers;
+  const { limits, skillContent, keywords, notes, occasion } = layers;
   const parts: string[] = [];
 
   // --- 1. Image context (nếu có đính kèm) ---
@@ -38,22 +36,17 @@ export function buildGeneratePrompt(layers: PromptLayers): string {
     `If an image is attached to this prompt, carefully analyze it to extract visual details (materials, colors, target audience, aesthetic, unique features) and incorporate those insights naturally into the product listing.`
   );
 
-  // --- 2. Base Rules ---
-  if (baseRules?.trim()) {
-    parts.push(`[FUNDAMENTAL AMAZON RULES]\n${baseRules.trim()}`);
-  }
-
-  // --- 3. Skill ---
+  // --- 2. Skill (includes base rules — merged into each .md file) ---
   if (skillContent.trim()) {
-    parts.push(`[SPECIFIC PRODUCT SKILL / FORMULAS]\n${skillContent.trim()}`);
+    parts.push(`[PRODUCT SKILL / FORMULAS]\n${skillContent.trim()}`);
   }
 
-  // --- 4. Notes ---
+  // --- 3. Notes ---
   if (notes?.trim()) {
     parts.push(`[SELLER NOTES — ADDITIONAL CONTEXT, AUDIENCE, OR OVERRIDES]\n${notes.trim()}`);
   }
 
-  // --- 5. Occasion ---
+  // --- 4. Occasion ---
   if (occasion?.trim()) {
     parts.push(
       `[CAMPAIGN / CUSTOMIZATION CONTEXT]\n` +
@@ -61,10 +54,10 @@ export function buildGeneratePrompt(layers: PromptLayers): string {
     );
   }
 
-  // --- 6. Keywords ---
+  // --- 5. Keywords ---
   parts.push(`[KEYWORDS TO INCORPORATE]\n${keywords.trim()}`);
 
-  // --- 7. Rule Base (Limits) ---
+  // --- 6. Rule Base (Limits) ---
   parts.push(
     `[GENERIC AMAZON RULE BASE — ENFORCE STRICTLY]\n` +
     `Title: max ${limits.title} characters\n` +
@@ -72,7 +65,7 @@ export function buildGeneratePrompt(layers: PromptLayers): string {
     `Description: max ${limits.description} characters`
   );
 
-  // --- 8. Output Task ---
+  // --- 7. Output Task ---
   parts.push(
     `[OUTPUT TASK]\n` +
     `Generate a complete, publish-ready Amazon product listing based on all the above.\n` +
