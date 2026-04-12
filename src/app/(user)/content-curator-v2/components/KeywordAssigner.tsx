@@ -60,13 +60,6 @@ function parseKeywords(raw: string): string[] {
   return result;
 }
 
-function findZone(kw: string, assignments: KeywordAssignments): Zone {
-  if (assignments.title.includes(kw)) return "title";
-  if (assignments.bullets.includes(kw)) return "bullets";
-  if (assignments.description.includes(kw)) return "description";
-  return "unassigned";
-}
-
 function moveKeyword(
   kw: string,
   to: Zone,
@@ -117,11 +110,20 @@ interface DropZoneProps {
   onDrop: (zone: Zone) => void;
   onDragStart: (kw: string) => void;
   onRemove: (kw: string) => void;
+  onAdd: (kw: string) => void;
 }
 
-function DropZone({ zone, keywords, onDrop, onDragStart, onRemove }: DropZoneProps) {
+function DropZone({ zone, keywords, onDrop, onDragStart, onRemove, onAdd }: DropZoneProps) {
   const [over, setOver] = useState(false);
+  const [inputVal, setInputVal] = useState("");
   const cfg = ZONE_CONFIG[zone];
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && inputVal.trim()) {
+      onAdd(inputVal.trim());
+      setInputVal("");
+    }
+  };
 
   return (
     <div
@@ -140,7 +142,7 @@ function DropZone({ zone, keywords, onDrop, onDragStart, onRemove }: DropZonePro
       <div className="flex flex-wrap gap-1.5">
         {keywords.length === 0 && (
           <span className="text-[11px] text-zinc-400 dark:text-zinc-500 italic">
-            Drop keywords here…
+            Drop or type keywords…
           </span>
         )}
         {keywords.map((kw) => (
@@ -162,6 +164,19 @@ function DropZone({ zone, keywords, onDrop, onDragStart, onRemove }: DropZonePro
           </span>
         ))}
       </div>
+
+      {/* Inline keyword input */}
+      <div className="mt-2 flex items-center gap-1">
+        <input
+          type="text"
+          value={inputVal}
+          onChange={(e) => setInputVal(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="Type keyword + Enter"
+          className={`flex-1 bg-transparent border-b text-[11px] px-1 py-0.5 outline-none placeholder:text-zinc-300 dark:placeholder:text-zinc-600 transition-colors ${cfg.color} border-zinc-200 dark:border-zinc-700 focus:border-current`}
+        />
+        <span className="material-symbols-outlined text-[12px] text-zinc-300 dark:text-zinc-600">keyboard_return</span>
+      </div>
     </div>
   );
 }
@@ -181,14 +196,13 @@ export default function KeywordAssigner({
   const allKeywords = useMemo(() => parseKeywords(keywords), [keywords]);
   const dragRef = useRef<string | null>(null);
 
-  const unassigned = allKeywords.filter((kw) => findZone(kw, assignments) === "unassigned");
-
-  // Clean up assignments when keywords change (remove stale ones)
-  const cleanAssignments: KeywordAssignments = {
-    title: assignments.title.filter((k) => allKeywords.includes(k)),
-    bullets: assignments.bullets.filter((k) => allKeywords.includes(k)),
-    description: assignments.description.filter((k) => allKeywords.includes(k)),
-  };
+  // Zones keep ALL keywords (dragged OR manually typed)
+  // Unassigned pool = Col 1 keywords not yet placed in any zone
+  const assignedSet = useMemo(
+    () => new Set([...assignments.title, ...assignments.bullets, ...assignments.description]),
+    [assignments]
+  );
+  const unassigned = allKeywords.filter((kw) => !assignedSet.has(kw));
 
   const handleDragStart = (kw: string) => {
     dragRef.current = kw;
@@ -196,12 +210,19 @@ export default function KeywordAssigner({
 
   const handleDrop = (zone: Zone) => {
     if (!dragRef.current) return;
-    onAssignmentsChange(moveKeyword(dragRef.current, zone, cleanAssignments));
+    onAssignmentsChange(moveKeyword(dragRef.current, zone, assignments));
     dragRef.current = null;
   };
 
   const handleRemove = (kw: string) => {
-    onAssignmentsChange(moveKeyword(kw, "unassigned", cleanAssignments));
+    onAssignmentsChange(moveKeyword(kw, "unassigned", assignments));
+  };
+
+  const handleAdd = (zone: Exclude<Zone, "unassigned">, kw: string) => {
+    const trimmed = kw.trim();
+    if (!trimmed) return;
+    // moveKeyword deduplicates: removes from other zones, adds to target
+    onAssignmentsChange(moveKeyword(trimmed, zone, assignments));
   };
 
   // Unassigned pool drop zone
@@ -222,10 +243,11 @@ export default function KeywordAssigner({
           <DropZone
             key={zone}
             zone={zone}
-            keywords={cleanAssignments[zone]}
+            keywords={assignments[zone]}
             onDrop={handleDrop}
             onDragStart={handleDragStart}
             onRemove={handleRemove}
+            onAdd={(kw) => handleAdd(zone, kw)}
           />
         ))}
       </div>
