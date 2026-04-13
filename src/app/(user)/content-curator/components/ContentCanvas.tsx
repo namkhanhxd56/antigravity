@@ -27,6 +27,13 @@ interface ContentCanvasProps {
   skillName?: string;
   /** External title override — used to sync edits made in Competitor tab back into Create */
   titleOverride?: string;
+  /**
+   * V3 pipeline: which section is currently generating.
+   * When set, only shows skeleton for the active section;
+   * completed sections show their content.
+   * When undefined, falls back to isGenerating (all skeletons).
+   */
+  generatingSection?: "title" | "bullets" | "description" | null;
 }
 
 // ─── RewriteBar ───────────────────────────────────────────────────────────────
@@ -97,7 +104,17 @@ function Counter({ current, max }: { current: number; max: number }) {
   );
 }
 
-export default function ContentCanvas({ content, isGenerating, onContentChange, bankKeywords = "", skillName = "Editorial_Pro_V2.md", titleOverride }: ContentCanvasProps) {
+export default function ContentCanvas({ content, isGenerating, onContentChange, bankKeywords = "", skillName = "Editorial_Pro_V2.md", titleOverride, generatingSection }: ContentCanvasProps) {
+  // V3 pipeline: per-section generating flags
+  const titleGenerating = generatingSection !== undefined
+    ? (isGenerating && generatingSection === "title")
+    : isGenerating;
+  const bulletsGenerating = generatingSection !== undefined
+    ? (isGenerating && generatingSection === "bullets")
+    : isGenerating;
+  const descGenerating = generatingSection !== undefined
+    ? (isGenerating && generatingSection === "description")
+    : isGenerating;
   const { limits } = useContentLimits();
   const [title, setTitle] = useState("");
   const [bullets, setBullets] = useState<string[]>(["", "", "", "", ""]);
@@ -461,7 +478,7 @@ export default function ContentCanvas({ content, isGenerating, onContentChange, 
             {!isGenerating && <Counter current={title.length} max={limits.title} />}
           </div>
         </div>
-        {isGenerating ? (
+        {titleGenerating ? (
           <div className="space-y-2 rounded-lg bg-zinc-100/80 dark:bg-zinc-800/80 px-4 py-3.5">
             <SkeletonLine className="h-4 w-full" />
             <SkeletonLine className="h-4 w-3/4" />
@@ -494,7 +511,7 @@ export default function ContentCanvas({ content, isGenerating, onContentChange, 
         </div>
 
         <div className="space-y-3">
-          {isGenerating ? (
+          {bulletsGenerating ? (
             Array.from({ length: 5 }).map((_, i) => (
               <div key={i} className="flex gap-4 rounded-lg bg-white dark:bg-zinc-900/50 ring-1 ring-zinc-200/60 dark:ring-zinc-800 p-3 items-start">
                 <div className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-zinc-300 dark:bg-zinc-700" />
@@ -527,24 +544,6 @@ export default function ContentCanvas({ content, isGenerating, onContentChange, 
           )}
         </div>
 
-        {!isGenerating && (
-          <div className="mt-3 flex items-center gap-1">
-            <button
-              onClick={removeBullet}
-              disabled={bullets.length <= 1}
-              className="flex h-7 w-7 items-center justify-center rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-300 dark:hover:bg-zinc-700 hover:text-zinc-700 dark:hover:text-zinc-300 active:bg-zinc-400 dark:active:bg-zinc-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <span className="material-symbols-outlined text-sm font-bold">remove</span>
-            </button>
-            <button
-              onClick={addBullet}
-              disabled={bullets.length >= 10}
-              className="flex h-7 w-7 items-center justify-center rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-300 dark:hover:bg-zinc-700 hover:text-zinc-700 dark:hover:text-zinc-300 active:bg-zinc-400 dark:active:bg-zinc-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <span className="material-symbols-outlined text-sm font-bold">add</span>
-            </button>
-          </div>
-        )}
       </div>
 
       {/* ═══ Product Description ═══ */}
@@ -576,7 +575,7 @@ export default function ContentCanvas({ content, isGenerating, onContentChange, 
             {!isGenerating && <Counter current={description.length} max={limits.description} />}
           </div>
         </div>
-        {isGenerating ? (
+        {descGenerating ? (
           <div className="space-y-2 rounded-lg bg-zinc-100/80 dark:bg-zinc-800/80 p-4 min-h-[160px]">
             {Array.from({ length: 5 }).map((_, i) => (
               <SkeletonLine key={i} className={`h-3 ${i % 3 === 2 ? "w-2/3" : "w-full"}`} />
@@ -626,7 +625,7 @@ export default function ContentCanvas({ content, isGenerating, onContentChange, 
           </div>
           {!isGenerating && <Counter current={searchTerms.length} max={limits.searchTerms} />}
         </div>
-        {isGenerating ? (
+        {(isGenerating && !generatingSection) ? (
           <div className="rounded-lg bg-zinc-200/60 dark:bg-zinc-800/60 p-3.5 min-h-[40px]">
             <SkeletonLine className="h-3 w-full" />
           </div>

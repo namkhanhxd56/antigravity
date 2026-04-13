@@ -116,3 +116,29 @@ export const CONTENT_LIMITS = {
   description: 1000,
   searchTerms: 250,
 } as const;
+
+// ─── V3 Pipeline Types ────────────────────────────────────────────────────────
+
+/** Kết quả phân tích ảnh sản phẩm (Step 0) */
+export interface ImageAnalysis {
+  sticker_count?: number;
+  niche?: string;
+  theme?: string;
+  text_on_stickers?: string[];
+  surfaces?: string[];
+  /** Raw text nếu AI không trả về JSON đúng format */
+  raw?: string;
+}
+
+/**
+ * Trạng thái hiện tại của pipeline sequential.
+ * null = không đang generate.
+ */
+export type PipelineStage = "image" | "title" | "bullets" | "description" | null;
+
+/** Keyword assignments từ KeywordAssigner component */
+export interface KeywordAssignments {
+  title: string[];
+  bullets: string[];
+  description: string[];
+}

@@ -46,13 +46,6 @@ export default function ContentCuratorNav() {
             <span className="material-symbols-outlined text-[16px]">home</span>
             Home
           </Link>
-          <Link
-            href="/content-curator-v2"
-            className="px-4 py-1 flex items-center gap-1.5 text-[13px] font-semibold rounded-md transition-colors text-zinc-500 dark:text-zinc-400 hover:bg-white dark:hover:bg-zinc-700 hover:text-zinc-900 dark:hover:text-white hover:shadow-sm"
-          >
-            <span className="material-symbols-outlined text-[16px]">experiment</span>
-            V2
-          </Link>
           <button
             onClick={() => setMode("create")}
             className={`px-4 py-1 flex items-center gap-1.5 text-[13px] font-semibold rounded-md transition-colors ${mode === "create" ? "bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm" : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300"}`}
