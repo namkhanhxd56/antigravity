@@ -37,6 +37,8 @@ interface SkillConfigProps {
   devPanel?: React.ReactNode;
   /** Called after skill is split — notifies parent of new split state */
   onSkillSplit?: (skillName: string) => void;
+  /** Called whenever full skill content is loaded (raw .md string) — for no-split pipeline */
+  onSkillContentLoaded?: (content: string) => void;
   /** Whether to show the Generate button (default true). Pass false when button lives in another column. */
   showGenerateButton?: boolean;
 }
@@ -55,6 +57,7 @@ export default function SkillConfig({
   canGenerate,
   devPanel,
   onSkillSplit,
+  onSkillContentLoaded,
   showGenerateButton = true,
 }: SkillConfigProps) {
   const [isReloading, setIsReloading] = useState(false);
@@ -87,6 +90,7 @@ export default function SkillConfig({
 
   useEffect(() => {
     fetchSkills();
+    fetchAndSplitSkill(selectedSkill);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -138,6 +142,7 @@ export default function SkillConfig({
     saveSplitToStorage(skillName, result);
     setSplitStatus(result.isValid ? "ok" : "missing");
     onSkillSplit?.(skillName);
+    onSkillContentLoaded?.(content);
 
     // Write split sections to disk for local inspection (no-op on Vercel)
     fetch("/content-curator/api/save-skill-local", {

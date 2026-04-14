@@ -42,14 +42,6 @@ export interface RewriteRequest {
    * Server falls back to limits.json if not provided.
    */
   charLimit?: number;
-  context: {
-    skillName: string;
-    keywords: string;
-    otherSections?: {
-      title?: string;
-      description?: string;
-    };
-  };
 }
 
 /** Response from the rewrite API */
@@ -135,6 +127,13 @@ export interface ImageAnalysis {
  * null = không đang generate.
  */
 export type PipelineStage = "image" | "title" | "bullets" | "description" | null;
+
+/**
+ * Phiên bản pipeline.
+ * v1 = tuần tự (sequential): image → title → bullets → description, có context chéo.
+ * v2 = (sẽ implement sau).
+ */
+export type PipelineVersion = "v1" | "v2";
 
 /** Keyword assignments từ KeywordAssigner component */
 export interface KeywordAssignments {

@@ -25,7 +25,7 @@ interface ContentCanvasProps {
   bankKeywords?: string;
   /** Active skill name — used for per-section rewrite context */
   skillName?: string;
-  /** External title override — used to sync edits made in Competitor tab back into Create */
+  /** External title override — used to sync edits made in Compare tab back into Create */
   titleOverride?: string;
   /**
    * V3 pipeline: which section is currently generating.
@@ -34,6 +34,10 @@ interface ContentCanvasProps {
    * When undefined, falls back to isGenerating (all skeletons).
    */
   generatingSection?: "title" | "bullets" | "description" | null;
+  /** Keywords remaining after pipeline (not used in title/bullets/description) */
+  remainingKeywords?: string[];
+  /** Count of occurrences per keyword in generated content (same as KeywordAssigner colors) */
+  usedKeywordCounts?: Record<string, number>;
 }
 
 // ─── RewriteBar ───────────────────────────────────────────────────────────────
@@ -104,7 +108,7 @@ function Counter({ current, max }: { current: number; max: number }) {
   );
 }
 
-export default function ContentCanvas({ content, isGenerating, onContentChange, bankKeywords = "", skillName = "Editorial_Pro_V2.md", titleOverride, generatingSection }: ContentCanvasProps) {
+export default function ContentCanvas({ content, isGenerating, onContentChange, bankKeywords = "", skillName = "Editorial_Pro_V2.md", titleOverride, generatingSection, remainingKeywords = [], usedKeywordCounts = {} }: ContentCanvasProps) {
   // V3 pipeline: per-section generating flags
   const titleGenerating = generatingSection !== undefined
     ? (isGenerating && generatingSection === "title")
@@ -225,7 +229,7 @@ export default function ContentCanvas({ content, isGenerating, onContentChange, 
     kwHistory.push(val);
   }, [kwHistory]);
 
-  // Sync title edited in Competitor tab back into ContentCanvas
+  // Sync title edited in Compare tab back into ContentCanvas
   const lastTitleOverride = useRef<string | undefined>(undefined);
   useEffect(() => {
     if (
@@ -240,50 +244,47 @@ export default function ContentCanvas({ content, isGenerating, onContentChange, 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [titleOverride]);
 
-  // Reload: fill generic keywords with UNUSED keywords from bank, up to limit
+  // Reload: fill generic keywords — chỉ dùng title+bullets+description để tìm kw chưa dùng
+  // (không dùng searchTerms để tránh kết quả thay đổi sau mỗi lần bấm)
   const handleReloadSearchTerms = useCallback(() => {
-    const allKws = Array.from(new Set(
-      bankKeywords
-        .split(/[\n,]+/)
-        .map((k) => stripVolume(k))
-        .filter(Boolean)
+    const allBankKws = Array.from(new Set(
+      bankKeywords.split(/[\n,]+/).map((k) => stripVolume(k)).filter(Boolean)
     ));
 
-    // Content to check against (title + bullets + description, NOT searchTerms)
-    const contentText = [title, ...bullets, description].join(" ");
-
-    const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-    // Find unused keywords
-    const unused = allKws.filter(
-      (kw) => {
-        const regex = new RegExp(`(?<=^|\\W)${escapeRegExp(kw)}(?=$|\\W)`, 'gi');
-        return !regex.test(contentText);
-      }
+    // Tính "đã dùng" CHỈ từ main content — không bao gồm searchTerms
+    const mainText = [title, ...bullets, description].join(" ");
+    const usedInMain = new Set(
+      allBankKws
+        .filter((kw) => {
+          const escaped = kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+          return new RegExp(escaped, "i").test(mainText);
+        })
+        .map((kw) => kw.toLowerCase())
     );
 
-    // Build search terms string up to the limit
+    const unused = allBankKws.filter((kw) => !usedInMain.has(kw.toLowerCase()));
+
     const maxLen = limits.searchTerms;
     const parts: string[] = [];
     let currentLen = 0;
 
     for (const kw of unused) {
-      const separator = parts.length > 0 ? "; " : "";
-      const needed = separator.length + kw.length;
+      const sep = parts.length > 0 ? "; " : "";
+      const needed = sep.length + kw.length;
       if (currentLen + needed > maxLen) break;
       parts.push(kw);
       currentLen += needed;
     }
 
-    const result = parts.join("; ");
-    updateSearchTerms(result);
-  }, [bankKeywords, title, bullets, description, limits.searchTerms, updateSearchTerms]);
+    updateSearchTerms(parts.join("; "));
+  }, [title, bullets, description, bankKeywords, limits.searchTerms, updateSearchTerms]);
 
   // Sync local state when new content arrives from API
   const lastSyncedContent = useRef<ContentListing | null>(null);
   useEffect(() => {
     if (content && content !== lastSyncedContent.current) {
       lastSyncedContent.current = content;
+      setOpenRewriteBar(null);
       // Strip surrounding quotes that AI sometimes adds
       const strip = (s: string) => s.replace(/^["']+|["']+$/g, "");
       setTimeout(() => {
@@ -328,7 +329,6 @@ export default function ContentCanvas({ content, isGenerating, onContentChange, 
     const sectionKey = section === "bullet" ? `bullet-${bulletIndex}` : section;
     setRewritingSection(sectionKey);
 
-    // Resolve the live char limit for this section from useContentLimits
     const charLimit =
       section === "title" ? limits.title :
       section === "bullet" ? limits.bulletItem :
@@ -342,11 +342,6 @@ export default function ContentCanvas({ content, isGenerating, onContentChange, 
         instruction,
         charLimit,
         model: getStoredModel(),
-        context: {
-          skillName,
-          keywords: bankKeywords,
-          otherSections: { title, description },
-        },
       };
       const { geminiKey, vertexKey, vertexJson } = getCuratorHeaders();
       const res = await fetch("/content-curator/api/rewrite", {
@@ -364,6 +359,7 @@ export default function ContentCanvas({ content, isGenerating, onContentChange, 
         if (section === "title") updateTitle(data.rewritten);
         else if (section === "description") updateDescription(data.rewritten);
         else if (section === "bullet" && bulletIndex !== undefined) updateBullet(bulletIndex, data.rewritten);
+        setOpenRewriteBar(null);
       } else if (!data.success) {
         setRewriteError(data.error ?? "Rewrite failed. Please try again.");
         setTimeout(() => setRewriteError(null), 4000);
@@ -374,7 +370,7 @@ export default function ContentCanvas({ content, isGenerating, onContentChange, 
     } finally {
       setRewritingSection(null);
     }
-  }, [skillName, bankKeywords, title, description, limits, updateTitle, updateDescription]);
+  }, [limits, updateTitle, updateDescription]);
 
   const keywordsList = useMemo(() => Array.from(new Set(
     bankKeywords

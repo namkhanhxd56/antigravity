@@ -14,7 +14,7 @@ import { buildImageAnalysisPrompt } from "../../lib/promptBuilderV3";
 
 export async function POST(request: NextRequest) {
   try {
-    const { image, skillImage } = await request.json();
+    const { image } = await request.json();
 
     if (!image) {
       return NextResponse.json(
@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     }
 
     const model = request.headers.get("x-curator-model") || null;
-    const prompt = buildImageAnalysisPrompt(skillImage);
+    const prompt = buildImageAnalysisPrompt();
 
     const rawResponse = await callAI({
       prompt,

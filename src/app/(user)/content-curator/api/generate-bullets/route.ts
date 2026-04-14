@@ -5,7 +5,7 @@
  * Trả về JSON array of strings.
  *
  * Body: {
- *   skillBullets: string,
+ *   skillContent: string,      — full skill file content (no-split)
  *   titleText: string,         — output từ step 1
  *   assignedKeywords: string[],
  *   availablePool: string[],   — đã update sau step 1
@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const {
-      skillBullets = "",
+      skillContent = "",
       titleText = "",
       assignedKeywords = [],
       availablePool = [],
@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
       occasion,
       model,
     } = body as {
-      skillBullets?: string;
+      skillContent?: string;
       titleText?: string;
       assignedKeywords?: string[];
       availablePool?: string[];
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
     };
 
     const prompt = buildBulletsPrompt({
-      skillBullets,
+      skillContent,
       imageAnalysis,
       titleText,
       assignedKeywords,

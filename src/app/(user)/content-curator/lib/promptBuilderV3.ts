@@ -1,8 +1,7 @@
 /**
  * promptBuilderV3 — per-section prompt builders cho sequential pipeline.
  *
- * Mỗi function nhận đúng context cần thiết cho section của nó.
- * Không có base rules chung — tất cả rules nằm trong skill file.
+ * No-split variant: mỗi step nhận toàn bộ skillContent thay vì section riêng.
  */
 
 import type { ContentLimits } from "./useContentLimits";
@@ -13,7 +12,7 @@ export interface ImageAnalysis {
   theme?: string;
   text_on_stickers?: string[];
   surfaces?: string[];
-  raw?: string; // raw text nếu AI không trả về JSON
+  raw?: string;
 }
 
 function formatImageAnalysis(analysis: ImageAnalysis | null): string {
@@ -28,30 +27,26 @@ function formatImageAnalysis(analysis: ImageAnalysis | null): string {
   return parts.join("\n");
 }
 
-// ─── Step 0: Image Analysis ───────────────────────────────────────────────────
+// ─── Step 0: Image Analysis (default prompt — no skill involvement) ───────────
 
-const DEFAULT_IMAGE_PROMPT =
-  `Analyze this product image carefully.\n` +
-  `Return ONLY a valid JSON object, no markdown:\n` +
-  `{\n` +
-  `  "sticker_count": <number of distinct sticker/item designs visible>,\n` +
-  `  "niche": "<product niche, e.g. 'funny cat stickers'>",\n` +
-  `  "theme": "<overall theme or style>",\n` +
-  `  "text_on_stickers": ["<text visible on each sticker if any>"],\n` +
-  `  "surfaces": ["<suitable surfaces or use cases, e.g. laptop, water bottle>"]` +
-  `\n}`;
-
-export function buildImageAnalysisPrompt(skillImage?: string): string {
-  if (skillImage?.trim()) {
-    return skillImage.trim();
-  }
-  return DEFAULT_IMAGE_PROMPT;
+export function buildImageAnalysisPrompt(): string {
+  return (
+    `Analyze this product image carefully.\n` +
+    `Return ONLY a valid JSON object, no markdown:\n` +
+    `{\n` +
+    `  "sticker_count": <number of distinct sticker/item designs visible>,\n` +
+    `  "niche": "<product niche, e.g. 'funny cat stickers'>",\n` +
+    `  "theme": "<overall theme or style>",\n` +
+    `  "text_on_stickers": ["<text visible on each sticker if any>"],\n` +
+    `  "surfaces": ["<suitable surfaces or use cases, e.g. laptop, water bottle>"]` +
+    `\n}`
+  );
 }
 
 // ─── Step 1: Title ────────────────────────────────────────────────────────────
 
 export interface TitlePromptInput {
-  skillTitle: string;
+  skillContent: string;
   imageAnalysis: ImageAnalysis | null;
   assignedKeywords: string[];
   availablePool: string[];
@@ -61,11 +56,11 @@ export interface TitlePromptInput {
 }
 
 export function buildTitlePrompt(input: TitlePromptInput): string {
-  const { skillTitle, imageAnalysis, assignedKeywords, availablePool, limits, notes, occasion } = input;
+  const { skillContent, imageAnalysis, assignedKeywords, availablePool, limits, notes, occasion } = input;
   const parts: string[] = [];
 
-  if (skillTitle.trim()) {
-    parts.push(`[SKILL — TITLE WRITING RULES]\n${skillTitle.trim()}`);
+  if (skillContent.trim()) {
+    parts.push(`[SKILL WRITING RULES]\n${skillContent.trim()}`);
   }
 
   const imgText = formatImageAnalysis(imageAnalysis);
@@ -92,10 +87,10 @@ export function buildTitlePrompt(input: TitlePromptInput): string {
   parts.push(kwLines.join("\n"));
 
   parts.push(
-    `[RULES]\n` +
+    `[TASK]\n` +
+    `Write the product TITLE only.\n` +
     `- Max ${limits.title} characters total\n` +
     `- No ®©™ symbols\n` +
-    `- Use assigned keywords naturally — do not keyword-stuff\n` +
     `- Return ONLY the title string, no quotes, no markdown`
   );
 
@@ -105,7 +100,7 @@ export function buildTitlePrompt(input: TitlePromptInput): string {
 // ─── Step 2: Bullets ──────────────────────────────────────────────────────────
 
 export interface BulletsPromptInput {
-  skillBullets: string;
+  skillContent: string;
   imageAnalysis: ImageAnalysis | null;
   titleText: string;
   assignedKeywords: string[];
@@ -117,11 +112,11 @@ export interface BulletsPromptInput {
 }
 
 export function buildBulletsPrompt(input: BulletsPromptInput): string {
-  const { skillBullets, imageAnalysis, titleText, assignedKeywords, availablePool, bulletCount, limits, notes, occasion } = input;
+  const { skillContent, imageAnalysis, titleText, assignedKeywords, availablePool, bulletCount, limits, notes, occasion } = input;
   const parts: string[] = [];
 
-  if (skillBullets.trim()) {
-    parts.push(`[SKILL — BULLET WRITING RULES]\n${skillBullets.trim()}`);
+  if (skillContent.trim()) {
+    parts.push(`[SKILL WRITING RULES]\n${skillContent.trim()}`);
   }
 
   const imgText = formatImageAnalysis(imageAnalysis);
@@ -153,10 +148,10 @@ export function buildBulletsPrompt(input: BulletsPromptInput): string {
 
   const shape = Array.from({ length: bulletCount }, () => `"string"`).join(", ");
   parts.push(
-    `[RULES]\n` +
+    `[TASK]\n` +
+    `Write the BULLET POINTS only.\n` +
     `- Write exactly ${bulletCount} bullet points\n` +
     `- Max ${limits.bulletItem} characters per bullet\n` +
-    `- Each bullet highlights a distinct benefit or feature\n` +
     `- Do not repeat keywords already used in the title\n` +
     `- Return ONLY a valid JSON array: [${shape}]`
   );
@@ -167,7 +162,7 @@ export function buildBulletsPrompt(input: BulletsPromptInput): string {
 // ─── Step 3: Description ──────────────────────────────────────────────────────
 
 export interface DescriptionPromptInput {
-  skillDescription: string;
+  skillContent: string;
   imageAnalysis: ImageAnalysis | null;
   titleText: string;
   bulletsText: string[];
@@ -179,11 +174,11 @@ export interface DescriptionPromptInput {
 }
 
 export function buildDescriptionPrompt(input: DescriptionPromptInput): string {
-  const { skillDescription, imageAnalysis, titleText, bulletsText, assignedKeywords, availablePool, limits, notes, occasion } = input;
+  const { skillContent, imageAnalysis, titleText, bulletsText, assignedKeywords, availablePool, limits, notes, occasion } = input;
   const parts: string[] = [];
 
-  if (skillDescription.trim()) {
-    parts.push(`[SKILL — DESCRIPTION WRITING RULES]\n${skillDescription.trim()}`);
+  if (skillContent.trim()) {
+    parts.push(`[SKILL WRITING RULES]\n${skillContent.trim()}`);
   }
 
   const imgText = formatImageAnalysis(imageAnalysis);
@@ -215,10 +210,10 @@ export function buildDescriptionPrompt(input: DescriptionPromptInput): string {
   parts.push(kwLines.join("\n"));
 
   parts.push(
-    `[RULES]\n` +
+    `[TASK]\n` +
+    `Write the PRODUCT DESCRIPTION only.\n` +
     `- Max ${limits.description} characters\n` +
     `- Complement title and bullets — add new angles, don't repeat them\n` +
-    `- Use assigned keywords naturally\n` +
     `- Return ONLY the description string, no quotes, no markdown`
   );
 

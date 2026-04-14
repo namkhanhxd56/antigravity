@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState, useRef } from "react";
+import { useMemo, useState, useRef, useCallback } from "react";
+import type { PipelineVersion } from "../lib/types";
 
 export interface KeywordAssignments {
   title: string[];
@@ -22,6 +23,10 @@ interface KeywordAssignerProps {
    * Keys are lowercase keyword strings.
    */
   usedKeywordCounts?: Record<string, number>;
+  /** Active pipeline version */
+  pipelineVersion?: PipelineVersion;
+  /** Callback to change pipeline version */
+  onVersionChange?: (v: PipelineVersion) => void;
 }
 
 type Zone = "title" | "bullets" | "description" | "unassigned";
@@ -109,48 +114,65 @@ interface KwTagProps {
 
 function KwTag({ kw, volume, usedCount, dotClass, onDragStart, onRemove }: KwTagProps) {
   const isUsed = usedCount > 0;
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(kw).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1200);
+    });
+  }, [kw]);
 
   return (
     <div
       draggable
       onDragStart={onDragStart}
-      className={`inline-flex flex-col rounded-lg px-2 pt-1.5 pb-1 text-[11px] font-medium border cursor-grab active:cursor-grabbing select-none transition-colors min-w-[72px] ${
+      className={`relative inline-flex flex-col rounded-lg px-2 pt-1.5 pb-1 text-[11px] font-medium border cursor-grab active:cursor-grabbing transition-colors min-w-[60px] ${
         isUsed
           ? "bg-orange-100 dark:bg-orange-900/30 border-orange-300 dark:border-orange-600 text-orange-900 dark:text-orange-100"
           : "bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300"
       }`}
     >
-      {/* Top row: dot + keyword + remove */}
+      {/* Copied tooltip */}
+      {copied && (
+        <span className="pointer-events-none absolute -top-5 left-1/2 -translate-x-1/2 whitespace-nowrap text-[9px] font-semibold text-emerald-600 dark:text-emerald-400 z-10">
+          copied!
+        </span>
+      )}
+
+      {/* Top row: dot | text (click=copy) | remove */}
       <div className="flex items-center gap-1">
         {dotClass && (
           <span className={`inline-block h-1.5 w-1.5 rounded-full shrink-0 ${dotClass}`} />
         )}
-        <span className="leading-tight">{kw}</span>
+        <span
+          className="leading-tight cursor-pointer select-text flex-1"
+          onClick={handleCopy}
+        >
+          {kw}
+        </span>
         {onRemove && (
           <button
             onClick={(e) => { e.stopPropagation(); onRemove(); }}
-            className="ml-auto pl-1 opacity-40 hover:opacity-100 transition-opacity shrink-0"
-            title="Remove from zone"
+            className="ml-0.5 opacity-30 hover:opacity-100 transition-opacity shrink-0"
+            title="Remove"
           >
             <span className="material-symbols-outlined text-[11px]">close</span>
           </button>
         )}
       </div>
 
-      {/* Bottom row: volume left, count right */}
+      {/* Bottom row: volume | count */}
       {(volume !== null || isUsed) && (
         <div className="flex items-center justify-between mt-0.5 gap-2">
           <span className="text-[9px] text-zinc-400 dark:text-zinc-500">
             {volume !== null ? formatVolume(volume) : ""}
           </span>
           {isUsed && (
-            <span
-              className={`text-[9px] font-bold leading-none ${
-                usedCount === 1
-                  ? "text-green-600 dark:text-green-400"
-                  : "text-red-600 dark:text-red-400"
-              }`}
-            >
+            <span className={`text-[9px] font-bold leading-none ${
+              usedCount === 1 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
+            }`}>
               x{usedCount}
             </span>
           )}
@@ -246,6 +268,8 @@ export default function KeywordAssigner({
   isGenerating,
   canGenerate,
   usedKeywordCounts = {},
+  pipelineVersion = "v1",
+  onVersionChange,
 }: KeywordAssignerProps) {
   const parsedKeywords = useMemo(() => parseKeywordsWithVolume(keywords), [keywords]);
   const allKeywords = useMemo(() => parsedKeywords.map((p) => p.kw), [parsedKeywords]);
@@ -260,12 +284,13 @@ export default function KeywordAssigner({
   }, [parsedKeywords]);
 
   const dragRef = useRef<string | null>(null);
+  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
 
   const assignedSet = useMemo(
     () => new Set([...assignments.title, ...assignments.bullets, ...assignments.description]),
     [assignments]
   );
-  const unassigned = allKeywords.filter((kw) => !assignedSet.has(kw));
+  const unassigned = allKeywords.filter((kw) => !assignedSet.has(kw) && !dismissed.has(kw.toLowerCase()));
 
   const handleDragStart = (kw: string) => { dragRef.current = kw; };
 
@@ -283,6 +308,10 @@ export default function KeywordAssigner({
     const trimmed = kw.trim();
     if (!trimmed) return;
     onAssignmentsChange(moveKeyword(trimmed, zone, assignments));
+  };
+
+  const handleDismiss = (kw: string) => {
+    setDismissed((prev) => new Set([...prev, kw.toLowerCase()]));
   };
 
   const [overPool, setOverPool] = useState(false);
@@ -339,6 +368,7 @@ export default function KeywordAssigner({
               volume={volumeMap[kw.toLowerCase()] ?? null}
               usedCount={usedKeywordCounts[kw.toLowerCase()] ?? 0}
               onDragStart={() => handleDragStart(kw)}
+              onRemove={() => handleDismiss(kw)}
             />
           ))}
         </div>
@@ -373,6 +403,33 @@ export default function KeywordAssigner({
       </div>
 
       <hr className="border-zinc-100 dark:border-zinc-800 shrink-0" />
+
+      {/* Pipeline version toggle */}
+      <div className="flex items-center gap-2 shrink-0">
+        <span className="text-[11px] font-semibold tracking-wider text-zinc-500 dark:text-zinc-400 uppercase shrink-0">
+          Pipeline
+        </span>
+        <div className="flex rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-700 text-[11px] font-semibold">
+          <button
+            onClick={() => onVersionChange?.("v1")}
+            disabled={isGenerating}
+            className={`px-3 py-1.5 transition-colors ${
+              pipelineVersion === "v1"
+                ? "bg-[#EA580C] text-white"
+                : "bg-white dark:bg-zinc-900 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800"
+            } disabled:cursor-not-allowed`}
+          >
+            V1 — Sequential
+          </button>
+          <button
+            disabled
+            title="Coming soon"
+            className="px-3 py-1.5 bg-white dark:bg-zinc-900 text-zinc-300 dark:text-zinc-600 cursor-not-allowed border-l border-zinc-200 dark:border-zinc-700"
+          >
+            V2 — TBD
+          </button>
+        </div>
+      </div>
 
       {/* Generate button */}
       <button

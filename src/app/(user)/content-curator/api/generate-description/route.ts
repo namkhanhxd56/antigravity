@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const {
-      skillDescription = "",
+      skillContent = "",
       titleText = "",
       bulletsText = [],
       assignedKeywords = [],
@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
       occasion,
       model,
     } = body as {
-      skillDescription?: string;
+      skillContent?: string;
       titleText?: string;
       bulletsText?: string[];
       assignedKeywords?: string[];
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
     };
 
     const prompt = buildDescriptionPrompt({
-      skillDescription,
+      skillContent,
       imageAnalysis,
       titleText,
       bulletsText,

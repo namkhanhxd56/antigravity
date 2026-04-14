@@ -5,7 +5,7 @@
  * Trả về plain string (title text).
  *
  * Body: {
- *   skillTitle: string,       — từ localStorage split
+ *   skillContent: string,      — full skill file content (no-split)
  *   assignedKeywords: string[], — keywords user assign cho title
  *   availablePool: string[],  — keywords chưa assign (unassigned pool)
  *   imageAnalysis?: object,
@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const {
-      skillTitle = "",
+      skillContent = "",
       assignedKeywords = [],
       availablePool = [],
       imageAnalysis = null,
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
       occasion,
       model,
     } = body as {
-      skillTitle?: string;
+      skillContent?: string;
       assignedKeywords?: string[];
       availablePool?: string[];
       imageAnalysis?: ImageAnalysis | null;
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
     };
 
     const prompt = buildTitlePrompt({
-      skillTitle,
+      skillContent,
       imageAnalysis,
       assignedKeywords,
       availablePool,
