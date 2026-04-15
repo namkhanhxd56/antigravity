@@ -42,14 +42,6 @@ export interface RewriteRequest {
    * Server falls back to limits.json if not provided.
    */
   charLimit?: number;
-  context: {
-    skillName: string;
-    keywords: string;
-    otherSections?: {
-      title?: string;
-      description?: string;
-    };
-  };
 }
 
 /** Response from the rewrite API */
@@ -116,3 +108,36 @@ export const CONTENT_LIMITS = {
   description: 1000,
   searchTerms: 250,
 } as const;
+
+// ─── V3 Pipeline Types ────────────────────────────────────────────────────────
+
+/** Kết quả phân tích ảnh sản phẩm (Step 0) */
+export interface ImageAnalysis {
+  sticker_count?: number;
+  niche?: string;
+  theme?: string;
+  text_on_stickers?: string[];
+  surfaces?: string[];
+  /** Raw text nếu AI không trả về JSON đúng format */
+  raw?: string;
+}
+
+/**
+ * Trạng thái hiện tại của pipeline sequential.
+ * null = không đang generate.
+ */
+export type PipelineStage = "image" | "title" | "bullets" | "description" | null;
+
+/**
+ * Phiên bản pipeline.
+ * v1 = tuần tự (sequential): image → title → bullets → description, có context chéo.
+ * v2 = (sẽ implement sau).
+ */
+export type PipelineVersion = "v1" | "v2";
+
+/** Keyword assignments từ KeywordAssigner component */
+export interface KeywordAssignments {
+  title: string[];
+  bullets: string[];
+  description: string[];
+}

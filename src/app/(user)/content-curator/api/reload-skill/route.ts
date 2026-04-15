@@ -1,25 +1,13 @@
 /**
  * API Route: POST /content-curator/api/reload-skill
  *
- * Clears the in-memory cache for a specific skill (or all skills),
- * so the next generate request will re-read from disk.
- *
- * Body: { skillName?: string }  — omit to clear all skills
+ * No-op in V3 pipeline — skill content is passed directly from client
+ * (stored in localStorage) so there is no server-side skill cache to clear.
+ * Kept for backwards compatibility with SkillConfig's reload button.
  */
 
-import { NextRequest, NextResponse } from "next/server";
-import { clearSkillCache } from "../generate/route";
+import { NextResponse } from "next/server";
 
-export async function POST(request: NextRequest) {
-  const body = await request.json().catch(() => ({}));
-  const { skillName } = body as { skillName?: string };
-
-  clearSkillCache(skillName);
-
-  return NextResponse.json({
-    success: true,
-    message: skillName
-      ? `Cache cleared for skill: ${skillName}`
-      : "All skill caches cleared",
-  });
+export async function POST() {
+  return NextResponse.json({ success: true, message: "No server cache in V3 pipeline." });
 }

@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { DEFAULT_SKILL_OPTIONS, type SkillOption } from "../lib/types";
 import CustomizationContent from "./CustomizationContent";
+import { splitSkill, saveSplitToStorage, clearSplitStorage } from "../lib/skillSplitter";
 
 const LOCAL_SKILLS_KEY = "curator_local_skills";
 
@@ -34,6 +35,12 @@ interface SkillConfigProps {
   canGenerate: boolean;
   /** Slot cho Dev Inspector — undefined khi production (file bị gitignore) */
   devPanel?: React.ReactNode;
+  /** Called after skill is split — notifies parent of new split state */
+  onSkillSplit?: (skillName: string) => void;
+  /** Called whenever full skill content is loaded (raw .md string) — for no-split pipeline */
+  onSkillContentLoaded?: (content: string) => void;
+  /** Whether to show the Generate button (default true). Pass false when button lives in another column. */
+  showGenerateButton?: boolean;
 }
 
 export default function SkillConfig({
@@ -49,9 +56,13 @@ export default function SkillConfig({
   isGenerating,
   canGenerate,
   devPanel,
+  onSkillSplit,
+  onSkillContentLoaded,
+  showGenerateButton = true,
 }: SkillConfigProps) {
   const [isReloading, setIsReloading] = useState(false);
   const [skillOptions, setSkillOptions] = useState<SkillOption[]>(DEFAULT_SKILL_OPTIONS);
+  const [splitStatus, setSplitStatus] = useState<"none" | "ok" | "missing">("none");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   /** Merge server skills với local skills từ localStorage */
@@ -79,24 +90,72 @@ export default function SkillConfig({
 
   useEffect(() => {
     fetchSkills();
+    fetchAndSplitSkill(selectedSkill);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  /** Fetch content từ localStorage hoặc server, rồi split */
+  const fetchAndSplitSkill = async (skillName: string) => {
+    // 1. Thử localStorage trước (user-imported skills)
+    const localContent = getLocalSkillContent(skillName);
+    if (localContent) {
+      triggerSplit(skillName, localContent);
+      return;
+    }
+    // 2. Fallback: đọc từ server (built-in skills trên disk)
+    try {
+      const res = await fetch(`/content-curator/api/skill-content?name=${encodeURIComponent(skillName)}`);
+      const data = await res.json();
+      if (data.success && data.content) {
+        triggerSplit(skillName, data.content);
+      } else {
+        clearSplitStorage();
+        setSplitStatus("none");
+      }
+    } catch {
+      clearSplitStorage();
+      setSplitStatus("none");
+    }
+  };
 
   const handleReload = async () => {
     setIsReloading(true);
     try {
-      await fetch('/content-curator/api/reload-skill', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ skillName: selectedSkill }),
-      });
+      await fetchAndSplitSkill(selectedSkill);
     } finally {
       setIsReloading(false);
     }
   };
 
+  const handleSkillChange = async (skillName: string) => {
+    onSkillChange(skillName);
+    await fetchAndSplitSkill(skillName);
+  };
+
   const handleImportClick = () => {
     fileInputRef.current?.click();
+  };
+
+  /** Tách skill file thành 3 sections và lưu vào localStorage + disk (local only) */
+  const triggerSplit = (skillName: string, content: string) => {
+    const result = splitSkill(content);
+    saveSplitToStorage(skillName, result);
+    setSplitStatus(result.isValid ? "ok" : "missing");
+    onSkillSplit?.(skillName);
+    onSkillContentLoaded?.(content);
+
+    // Write split sections to disk for local inspection (no-op on Vercel)
+    fetch("/content-curator/api/save-skill-local", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        skillName,
+        image: result.image,
+        title: result.title,
+        bullets: result.bullets,
+        description: result.description,
+      }),
+    }).catch(() => {/* silently ignore */});
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -110,6 +169,9 @@ export default function SkillConfig({
       const localSkills = getLocalSkills();
       localSkills[file.name] = content;
       localStorage.setItem(LOCAL_SKILLS_KEY, JSON.stringify(localSkills));
+
+      // Tách skill thành 3 sections cho pipeline
+      triggerSplit(file.name, content);
 
       // Cập nhật dropdown + chọn skill vừa import
       await fetchSkills();
@@ -135,7 +197,7 @@ export default function SkillConfig({
           <div className="relative flex-1">
             <select
               value={selectedSkill}
-              onChange={(e) => onSkillChange(e.target.value)}
+              onChange={(e) => handleSkillChange(e.target.value)}
               className="w-full appearance-none rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 py-2.5 pl-4 pr-10 text-[13px] font-medium text-zinc-700 dark:text-zinc-200 focus:border-[#EA580C] focus:ring-1 focus:ring-[#EA580C] outline-none"
             >
               {skillOptions.map((opt) => (
@@ -165,13 +227,25 @@ export default function SkillConfig({
           accept=".md"
           onChange={handleFileChange} 
         />
-        <button 
+        <button
           onClick={handleImportClick}
           className="w-full rounded-lg border border-dashed border-zinc-300 dark:border-zinc-700 py-2 text-[13px] font-medium text-zinc-500 dark:text-zinc-400 hover:border-zinc-400 dark:hover:border-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors flex items-center justify-center gap-1"
         >
           <span className="material-symbols-outlined text-[16px]">arrow_upward</span>
           Import .md skill file
         </button>
+
+        {/* Split status indicator */}
+        {splitStatus !== "none" && (
+          <div className={`flex items-center gap-1.5 text-[11px] font-medium ${splitStatus === "ok" ? "text-emerald-600 dark:text-emerald-400" : "text-amber-500"}`}>
+            <span className="material-symbols-outlined text-[14px]">
+              {splitStatus === "ok" ? "check_circle" : "warning"}
+            </span>
+            {splitStatus === "ok"
+              ? "Skill split: TITLE / BULLETS / DESCRIPTION ✓"
+              : "Skill missing ## TITLE / ## BULLETS / ## DESCRIPTION sections"}
+          </div>
+        )}
       </div>
 
       <hr className="mb-6 border-zinc-100 dark:border-zinc-800" />
@@ -203,23 +277,25 @@ export default function SkillConfig({
       <hr className="mb-6 border-zinc-100 dark:border-zinc-800" />
 
       {/* Generate Button */}
-      <button
-        onClick={onGenerate}
-        disabled={isGenerating || !canGenerate}
-        className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#B45309] py-3 text-[15px] font-medium text-white shadow-sm transition-all hover:bg-[#92400e] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
-      >
-        {isGenerating ? (
-          <>
-            <span className="material-symbols-outlined animate-spin text-[18px]">progress_activity</span>
-            Generating…
-          </>
-        ) : (
-          <>
-            <span className="material-symbols-outlined text-[18px]">auto_awesome</span>
-            Generate content
-          </>
-        )}
-      </button>
+      {showGenerateButton && (
+        <button
+          onClick={onGenerate}
+          disabled={isGenerating || !canGenerate}
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#B45309] py-3 text-[15px] font-medium text-white shadow-sm transition-all hover:bg-[#92400e] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
+        >
+          {isGenerating ? (
+            <>
+              <span className="material-symbols-outlined animate-spin text-[18px]">progress_activity</span>
+              Generating…
+            </>
+          ) : (
+            <>
+              <span className="material-symbols-outlined text-[18px]">auto_awesome</span>
+              Generate content
+            </>
+          )}
+        </button>
+      )}
 
       {/* Dev Inspector slot — chỉ có khi file DevInspector.tsx tồn tại (dev only) */}
       {devPanel}

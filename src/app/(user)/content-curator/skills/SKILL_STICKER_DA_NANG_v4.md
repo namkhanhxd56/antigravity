@@ -52,8 +52,7 @@ Trình bày kết quả phân tích trước khi viết listing:
 
 ---
 
-## II. TITLE — CÔNG THỨC VÀ PATTERN
-
+## TITLE
 ### A. Công thức Title chuẩn
 
 ```
@@ -116,7 +115,7 @@ Trình bày kết quả phân tích trước khi viết listing:
 
 ---
 
-## III. BULLET POINTS — CẤU TRÚC VÀ NỘI DUNG
+## BULLET POINTS
 
 ### A. Cấu trúc mỗi Bullet
 
@@ -172,7 +171,7 @@ Occasions: birthdays, holidays, stocking stuffers, party favors, white elephant,
 
 ---
 
-## IV. DESCRIPTION — CHIẾN LƯỢC VIẾT
+## DESCRIPTION
 
 ### A. Quy tắc
 - Nhồi TẤT CẢ keyword còn lại chưa dùng ở title + bullets
@@ -226,7 +225,7 @@ Occasions: birthdays, holidays, stocking stuffers, party favors, white elephant,
 
 ---
 
-## VI. CHECKLIST TRƯỚC KHI SUBMIT
+## CHECKLIST TRƯỚC KHI SUBMIT
 
 ### Phân tích ảnh
 - [ ] Đã đếm số lượng sticker → dùng cho (XPcs)

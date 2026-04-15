@@ -69,7 +69,7 @@ function HighlightText({
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
-interface CompetitorViewProps {
+interface CompareViewProps {
   myTitle: string;
   onMyTitleChange?: (val: string) => void;
   bankKeywords: string;
@@ -83,7 +83,7 @@ function stripVolume(line: string): string {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export default function CompetitorView({ myTitle, onMyTitleChange, bankKeywords }: CompetitorViewProps) {
+export default function CompareView({ myTitle, onMyTitleChange, bankKeywords }: CompareViewProps) {
   const [competitors, setCompetitors] = useState<string[]>([""]);
 
   const keywordsList = useMemo(
@@ -116,7 +116,7 @@ export default function CompetitorView({ myTitle, onMyTitleChange, bankKeywords 
 
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">Competitor</h1>
+        <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">Compare</h1>
         <p className="mt-1 text-[12px] text-zinc-400 dark:text-zinc-500">
           Compare your title against competitors. Keywords from your bank are highlighted in
           <span className="text-[#EA580C] font-semibold"> orange</span>.
