@@ -6,6 +6,7 @@ import SkillConfig from "./components/SkillConfig";
 import ContentCanvas from "./components/ContentCanvas";
 import CompareView from "./components/CompareView";
 import KeywordAssigner, { type KeywordAssignments } from "./components/KeywordAssigner";
+import KeywordCoverage from "./components/KeywordCoverage";
 import { getCuratorHeaders } from "./lib/curator-keys";
 import { getStoredModel } from "./components/ContentCuratorNav";
 import { initPool, scanUsed, consumeStep, getRemainingKeywords } from "./lib/keywordPool";
@@ -270,6 +271,11 @@ export default function ContentCuratorPage() {
             {allKeywords.length > 0 ? `${allKeywords.length} keywords parsed` : "Paste from Helium10, Cerebro, etc."}
           </div>
         </div>
+
+        <KeywordCoverage
+          keywords={keywords}
+          usedKeywordCounts={usedKeywordCounts}
+        />
 
         <SkillConfig
           selectedSkill={selectedSkill}
