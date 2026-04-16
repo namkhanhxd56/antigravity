@@ -11,19 +11,53 @@ description: "Product skill for writing Amazon listings for general-purpose stic
 
 ---
 
-## I. PHÂN TÍCH HÌNH ẢNH SẢN PHẨM (Image Analysis)
+## PHÂN LOẠI NICHE VÀ CÁCH ĐIỀU CHỈNH
 
-Khi người dùng upload hình ảnh sản phẩm, PHẢI thực hiện phân tích trước khi viết listing:
+### A. Funny/Sarcastic/Meme (59% listing win)
+- **Title:** Thêm "Funny" + "Humor" + "Sarcastic" + "Meme"
+- **BP1:** Emotional trigger = laugh, relatable, witty
+- **Surfaces ưu tiên:** Hard Hat, Lunch Box, Toolbox
+- **Gift angle:** Coworker, best friend, office party
+
+### B. Awareness/Cause/Pride
+- **Title:** Thêm "Awareness" + cause + "Decals for Car"
+- **BP1:** Emotional trigger = empathy, safety, inclusion
+- **Surfaces ưu tiên:** Car, Bumper, Truck, Window
+- **Gift angle:** Parents, teachers, caregivers
+
+### C. Inspirational/Motivational
+- **Title:** Thêm "Inspirational" + "Quotes" + "Motivational"
+- **BP1:** Emotional trigger = empowerment, affirmation
+- **Surfaces ưu tiên:** Kindle, Journal, Planner, Mirror
+- **Gift angle:** Women, teen girls, students
+
+### D. Sport/Hobby
+- **Title:** Thêm sport name + "Gift for Player/Team/Fan"
+- **BP1:** Emotional trigger = team pride, passion
+- **Surfaces ưu tiên:** Tumbler, Water Bottle, Car
+- **Gift angle:** Teammate, coach, fan
+
+### E. Aesthetic/Monogram
+- **Title:** Thêm "Initial" + "Monogram" + "Floral" + "Aesthetic"
+- **BP1:** Emotional trigger = personalization, elegance
+- **Surfaces ưu tiên:** Journal, Water Bottle, Phone
+- **Gift angle:** Women, teens, back-to-school
+
+---
+
+## IMAGE
+
+Phân tích hình ảnh sản phẩm trước khi viết listing. Trích xuất các thông tin sau và trả về JSON.
 
 ### A. Đếm số lượng sticker
 - Đếm số lượng sticker riêng biệt trong ảnh → dùng làm `(X Pcs)` trong title
 - Nếu có nhiều ảnh, đếm tổng số design duy nhất (không đếm trùng)
-- Nếu không rõ → hỏi lại người dùng
+- Nếu không rõ → để sticker_count = null
 
 ### B. Xác định chủ đề / theme
 - Nhận diện nội dung chính: nhân vật, biểu tượng, text/quote, phong cách minh họa
 - Xác định tone: funny/sarcastic, inspirational, awareness, sport, aesthetic
-- Ghi nhận chi tiết thiết kế nổi bật: màu sắc chủ đạo, kiểu illustration, badge/emblem style...
+- Ghi nhận chi tiết thiết kế nổi bật: màu sắc chủ đạo, kiểu illustration, badge/emblem style
 
 ### C. Đọc text trên sticker
 - Đọc và ghi lại chính xác mọi text/quote trên từng sticker
@@ -39,20 +73,14 @@ Khi người dùng upload hình ảnh sản phẩm, PHẢI thực hiện phân t
 | Bóng, dụng cụ thể thao, logo team | Sport/Hobby |
 | Chữ cái, hoa văn, monogram, minimalist | Aesthetic/Monogram |
 
-### E. Output sau phân tích ảnh
-
-Trình bày kết quả phân tích trước khi viết listing:
-```
-📦 Số lượng: X Pcs
-🎨 Chủ đề: [mô tả ngắn]
-🏷️ Niche: [Funny/Awareness/Inspirational/Sport/Aesthetic]
-📝 Text trên sticker: ["quote 1", "quote 2", ...]
-🎯 Chi tiết thiết kế: [mô tả style, màu sắc, kiểu illustration]
-```
+### E. Bề mặt sử dụng
+Xác định các bề mặt phù hợp dựa trên niche và thiết kế:
+Laptop, Water Bottle, Phone/Phone Case, Tumbler, Car/Car Bumper, Hard Hat, Kindle, Journal, Notebook, Guitar, Skateboard, Helmet, Luggage
 
 ---
 
 ## TITLE
+
 ### A. Công thức Title chuẩn
 
 ```
@@ -189,72 +217,7 @@ Occasions: birthdays, holidays, stocking stuffers, party favors, white elephant,
 Đoạn 5: Gift/CTA + đối tượng/dịp còn lại
 ```
 
----
-
-## V. PHÂN LOẠI NICHE VÀ CÁCH ĐIỀU CHỈNH
-
-### A. Funny/Sarcastic/Meme (59% listing win)
-- **Title:** Thêm "Funny" + "Humor" + "Sarcastic" + "Meme"
-- **BP1:** Emotional trigger = laugh, relatable, witty
-- **Surfaces ưu tiên:** Hard Hat, Lunch Box, Toolbox
-- **Gift angle:** Coworker, best friend, office party
-
-### B. Awareness/Cause/Pride
-- **Title:** Thêm "Awareness" + cause + "Decals for Car"
-- **BP1:** Emotional trigger = empathy, safety, inclusion
-- **Surfaces ưu tiên:** Car, Bumper, Truck, Window
-- **Gift angle:** Parents, teachers, caregivers
-
-### C. Inspirational/Motivational
-- **Title:** Thêm "Inspirational" + "Quotes" + "Motivational"
-- **BP1:** Emotional trigger = empowerment, affirmation
-- **Surfaces ưu tiên:** Kindle, Journal, Planner, Mirror
-- **Gift angle:** Women, teen girls, students
-
-### D. Sport/Hobby
-- **Title:** Thêm sport name + "Gift for Player/Team/Fan"
-- **BP1:** Emotional trigger = team pride, passion
-- **Surfaces ưu tiên:** Tumbler, Water Bottle, Car
-- **Gift angle:** Teammate, coach, fan
-
-### E. Aesthetic/Monogram
-- **Title:** Thêm "Initial" + "Monogram" + "Floral" + "Aesthetic"
-- **BP1:** Emotional trigger = personalization, elegance
-- **Surfaces ưu tiên:** Journal, Water Bottle, Phone
-- **Gift angle:** Women, teens, back-to-school
-
----
-
-## CHECKLIST TRƯỚC KHI SUBMIT
-
-### Phân tích ảnh
-- [ ] Đã đếm số lượng sticker → dùng cho (XPcs)
-- [ ] Đã xác định chủ đề/theme
-- [ ] Đã đọc text trên sticker
-- [ ] Đã phân loại niche
-
-### Title
-- [ ] Keyword quan trọng nhất ở đầu
-- [ ] Có `(XPcs)` khớp với số lượng từ ảnh
-- [ ] Có "Sticker/Stickers" + "Decal/Decals" + "Vinyl"
-- [ ] Có danh sách bề mặt phân cách bằng `,` (ít nhất: Laptop, Water Bottle)
-- [ ] Có kích thước
-
-### Bullet Points
-- [ ] 5 bullets, mỗi bullet có header rõ ràng
-- [ ] BP1 mô tả đúng design từ ảnh
-- [ ] BP2: Quality/Material
-- [ ] BP3: Bề mặt MỚI (không trùng title)
-- [ ] BP4: Easy Application
-- [ ] BP5: Gift/Occasion
-- [ ] Không lặp keyword đã có trong title
-- [ ] Không dùng emoji hay ký tự đặc biệt
-
-### Description
-- [ ] Viết đoạn văn, không bullet
-- [ ] Mô tả chi tiết từng design (từ ảnh)
-- [ ] Nhồi keyword còn lại chưa dùng ở title + bullets
-
-### Tổng thể
-- [ ] Mỗi keyword xuất hiện 1 LẦN DUY NHẤT trong toàn listing
-- [ ] Exact/Phrase match, không Broad
+### C. Quy tắc keyword trong Description
+- Mỗi keyword xuất hiện 1 LẦN DUY NHẤT trong toàn listing
+- Exact/Phrase match, không Broad
+- Tự nhiên trong câu văn, không liệt kê thô

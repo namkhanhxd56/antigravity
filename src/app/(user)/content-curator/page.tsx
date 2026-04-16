@@ -10,6 +10,7 @@ import KeywordCoverage from "./components/KeywordCoverage";
 import { getCuratorHeaders } from "./lib/curator-keys";
 import { getStoredModel } from "./components/ContentCuratorNav";
 import { initPool, scanUsed, consumeStep, getRemainingKeywords } from "./lib/keywordPool";
+import { loadSplitFromStorage } from "./lib/skillSplitter";
 import { useContentLimits } from "./lib/useContentLimits";
 import type { ContentListing, ImageAnalysis, PipelineStage, PipelineVersion, KeywordAssignments as KWAssignments } from "./lib/types";
 import { useCuratorMode } from "./lib/ModeContext";
@@ -103,7 +104,19 @@ export default function ContentCuratorPage() {
     };
   }, []);
 
-  // ─── Sequential Pipeline ─────────────────────────────────────────────────────
+  // ─── Shared: compute per-keyword counts from full generated text ────────────
+  const computeCounts = useCallback((fullText: string) => {
+    const counts: Record<string, number> = {};
+    for (const kw of allKeywords) {
+      const escaped = kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const matches = fullText.match(new RegExp(escaped, "gi"));
+      if (matches && matches.length > 0) counts[kw.toLowerCase()] = matches.length;
+    }
+    return counts;
+  }, [allKeywords]);
+
+  // ─── V1 Pipeline (Sequential, zone-locked pool) ───────────────────────────────
+  // ─── V2 Pipeline (Sequential, cascade push-down) ─────────────────────────────
 
   const handleGenerate = useCallback(async () => {
     if (!canGenerate) return;
@@ -114,9 +127,6 @@ export default function ContentCuratorPage() {
     setRemainingKeywords([]);
     setUsedKeywordCounts({});
 
-    // Init keyword pool
-    let pool = initPool(keywords, assignments);
-
     const authHeaders = getHeaders();
     const baseBody = {
       limits,
@@ -126,7 +136,10 @@ export default function ContentCuratorPage() {
     };
 
     try {
-      // ── Step 0: Image Analysis ─────────────────────────────────────────────
+      // Load split once — used by both Step 0 (image skill) and V2 steps
+      const splitData = pipelineVersion === "v2" ? loadSplitFromStorage() : null;
+
+      // ── Step 0: Image Analysis (shared) ───────────────────────────────────
       let imageAnalysis: ImageAnalysis | null = null;
       if (productImage) {
         setPipelineStage("image");
@@ -134,108 +147,180 @@ export default function ContentCuratorPage() {
           const res = await fetch("/content-curator/api/analyze-image", {
             method: "POST",
             headers: authHeaders,
-            body: JSON.stringify({ image: productImage }),
+            body: JSON.stringify({
+              image: productImage,
+              skillImageContent: splitData?.split.image ?? "",
+            }),
           });
           const data = await res.json();
           if (data.success) imageAnalysis = data.analysis;
         } catch {
-          // Image analysis failure is non-fatal — continue without it
           console.warn("[pipeline] image analysis failed, continuing without it");
         }
       }
 
-      // ── Step 1: Title ──────────────────────────────────────────────────────
-      setPipelineStage("title");
-      const titleRes = await fetch("/content-curator/api/generate-title", {
-        method: "POST",
-        headers: authHeaders,
-        body: JSON.stringify({
-          ...baseBody,
-          skillContent,
-          assignedKeywords: pool.assigned.title,
-          availablePool: pool.available_pool,
-          imageAnalysis,
-        }),
-      });
-      const titleData = await titleRes.json();
-      if (!titleData.success) throw new Error(titleData.error ?? "Title generation failed");
+      if (pipelineVersion === "v1") {
+        // ── V1: Zone-locked sequential pool ─────────────────────────────────
+        let pool = initPool(keywords, assignments);
 
-      const titleText: string = titleData.title ?? "";
+        // Step 1: Title
+        setPipelineStage("title");
+        const titleRes = await fetch("/content-curator/api/generate-title", {
+          method: "POST",
+          headers: authHeaders,
+          body: JSON.stringify({
+            ...baseBody, skillContent,
+            assignedKeywords: pool.assigned.title,
+            availablePool: pool.available_pool,
+            imageAnalysis,
+          }),
+        });
+        const titleData = await titleRes.json();
+        if (!titleData.success) throw new Error(titleData.error ?? "Title generation failed");
+        const titleText: string = titleData.title ?? "";
 
-      // Scan used keywords, update pool
-      const usedInTitle = scanUsed(titleText, [...pool.assigned.title, ...pool.available_pool]);
-      pool = consumeStep(pool, usedInTitle, "title");
+        pool = consumeStep(pool, scanUsed(titleText, [...pool.assigned.title, ...pool.available_pool]), "title");
+        setContent({ title: titleText, bullets: [], description: "", searchTerms: "" });
 
-      // Update content progressively
-      setContent({ title: titleText, bullets: [], description: "", searchTerms: "" });
+        // Step 2: Bullets
+        setPipelineStage("bullets");
+        const bulletsRes = await fetch("/content-curator/api/generate-bullets", {
+          method: "POST",
+          headers: authHeaders,
+          body: JSON.stringify({
+            ...baseBody, skillContent, titleText,
+            assignedKeywords: pool.assigned.bullets,
+            availablePool: pool.available_pool,
+            bulletCount, imageAnalysis,
+          }),
+        });
+        const bulletsData = await bulletsRes.json();
+        if (!bulletsData.success) throw new Error(bulletsData.error ?? "Bullets generation failed");
+        const bulletsArr: string[] = bulletsData.bullets ?? [];
 
-      // ── Step 2: Bullets ────────────────────────────────────────────────────
-      setPipelineStage("bullets");
-      const bulletsRes = await fetch("/content-curator/api/generate-bullets", {
-        method: "POST",
-        headers: authHeaders,
-        body: JSON.stringify({
-          ...baseBody,
-          skillContent,
-          titleText,
-          assignedKeywords: pool.assigned.bullets,
-          availablePool: pool.available_pool,
-          bulletCount,
-          imageAnalysis,
-        }),
-      });
-      const bulletsData = await bulletsRes.json();
-      if (!bulletsData.success) throw new Error(bulletsData.error ?? "Bullets generation failed");
+        pool = consumeStep(pool, scanUsed(bulletsArr.join(" "), [...pool.assigned.bullets, ...pool.available_pool]), "bullets");
+        setContent({ title: titleText, bullets: bulletsArr, description: "", searchTerms: "" });
 
-      const bulletsArr: string[] = bulletsData.bullets ?? [];
-      const bulletsText = bulletsArr.join(" ");
+        // Step 3: Description
+        setPipelineStage("description");
+        const descRes = await fetch("/content-curator/api/generate-description", {
+          method: "POST",
+          headers: authHeaders,
+          body: JSON.stringify({
+            ...baseBody, skillContent, titleText, bulletsText: bulletsArr,
+            assignedKeywords: pool.assigned.description,
+            availablePool: pool.available_pool,
+            imageAnalysis,
+          }),
+        });
+        const descData = await descRes.json();
+        if (!descData.success) throw new Error(descData.error ?? "Description generation failed");
+        const descriptionText: string = descData.description ?? "";
 
-      // Scan used keywords, update pool
-      const usedInBullets = scanUsed(bulletsText, [...pool.assigned.bullets, ...pool.available_pool]);
-      pool = consumeStep(pool, usedInBullets, "bullets");
+        pool = consumeStep(pool, scanUsed(descriptionText, [...pool.assigned.description, ...pool.available_pool]), "description");
 
-      // Update content progressively
-      setContent({ title: titleText, bullets: bulletsArr, description: "", searchTerms: "" });
+        setContent({ title: titleText, bullets: bulletsArr, description: descriptionText, searchTerms: "" });
+        setRemainingKeywords(getRemainingKeywords(pool));
+        setUsedKeywordCounts(computeCounts([titleText, ...bulletsArr, descriptionText].join(" ")));
 
-      // ── Step 3: Description ────────────────────────────────────────────────
-      setPipelineStage("description");
-      const descRes = await fetch("/content-curator/api/generate-description", {
-        method: "POST",
-        headers: authHeaders,
-        body: JSON.stringify({
-          ...baseBody,
-          skillContent,
-          titleText,
-          bulletsText: bulletsArr,
-          assignedKeywords: pool.assigned.description,
-          availablePool: pool.available_pool,
-          imageAnalysis,
-        }),
-      });
-      const descData = await descRes.json();
-      if (!descData.success) throw new Error(descData.error ?? "Description generation failed");
+      } else {
+        // ── V2: Cascade push-down pool + split skill sections ────────────────
+        const v2TitleSkill   = splitData?.split.title       || skillContent;
+        const v2BulletsSkill = splitData?.split.bullets     || skillContent;
+        const v2DescSkill    = splitData?.split.description || skillContent;
 
-      const descriptionText: string = descData.description ?? "";
+        const isUsedKw = (kw: string, used: string[]) =>
+          used.some((u) => u.toLowerCase() === kw.toLowerCase());
 
-      // Scan used keywords, update pool
-      const usedInDesc = scanUsed(descriptionText, [...pool.assigned.description, ...pool.available_pool]);
-      pool = consumeStep(pool, usedInDesc, "description");
+        const allAssigned = new Set([
+          ...assignments.title.map((k) => k.toLowerCase()),
+          ...assignments.bullets.map((k) => k.toLowerCase()),
+          ...assignments.description.map((k) => k.toLowerCase()),
+        ]);
+        let v2Pool = allKeywords.filter((k) => !allAssigned.has(k.toLowerCase()));
+        const v2Assigned = {
+          title: [...assignments.title],
+          bullets: [...assignments.bullets],
+          description: [...assignments.description],
+        };
 
-      // Final content
-      setContent({ title: titleText, bullets: bulletsArr, description: descriptionText, searchTerms: "" });
-      setRemainingKeywords(getRemainingKeywords(pool));
+        // Step 1: Title
+        setPipelineStage("title");
+        const titleRes = await fetch("/content-curator/api/generate-title", {
+          method: "POST",
+          headers: authHeaders,
+          body: JSON.stringify({
+            ...baseBody, skillContent: v2TitleSkill,
+            assignedKeywords: v2Assigned.title,
+            availablePool: v2Pool,
+            imageAnalysis,
+          }),
+        });
+        const titleData = await titleRes.json();
+        if (!titleData.success) throw new Error(titleData.error ?? "Title generation failed");
+        const titleText: string = titleData.title ?? "";
 
-      // Compute per-keyword usage counts across all generated content
-      const fullText = [titleText, ...bulletsArr, descriptionText].join(" ");
-      const counts: Record<string, number> = {};
-      for (const kw of allKeywords) {
-        const escaped = kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-        const matches = fullText.match(new RegExp(escaped, "gi"));
-        if (matches && matches.length > 0) {
-          counts[kw.toLowerCase()] = matches.length;
-        }
+        // Push-down: unused title-assigned → bullets assigned (must-use)
+        const usedInTitle = scanUsed(titleText, [...v2Assigned.title, ...v2Pool]);
+        const unusedTitleAssigned = v2Assigned.title.filter((k) => !isUsedKw(k, usedInTitle));
+        v2Assigned.bullets = [...unusedTitleAssigned, ...v2Assigned.bullets];
+        v2Assigned.title = [];
+        v2Pool = v2Pool.filter((k) => !isUsedKw(k, usedInTitle));
+
+        setContent({ title: titleText, bullets: [], description: "", searchTerms: "" });
+
+        // Step 2: Bullets
+        setPipelineStage("bullets");
+        const bulletsRes = await fetch("/content-curator/api/generate-bullets", {
+          method: "POST",
+          headers: authHeaders,
+          body: JSON.stringify({
+            ...baseBody, skillContent: v2BulletsSkill, titleText,
+            assignedKeywords: v2Assigned.bullets,
+            availablePool: v2Pool,
+            bulletCount, imageAnalysis,
+          }),
+        });
+        const bulletsData = await bulletsRes.json();
+        if (!bulletsData.success) throw new Error(bulletsData.error ?? "Bullets generation failed");
+        const bulletsArr: string[] = bulletsData.bullets ?? [];
+
+        // Push-down: unused bullets-assigned → description assigned (must-use)
+        const usedInBullets = scanUsed(bulletsArr.join(" "), [...v2Assigned.bullets, ...v2Pool]);
+        const unusedBulletsAssigned = v2Assigned.bullets.filter((k) => !isUsedKw(k, usedInBullets));
+        v2Assigned.description = [...unusedBulletsAssigned, ...v2Assigned.description];
+        v2Assigned.bullets = [];
+        v2Pool = v2Pool.filter((k) => !isUsedKw(k, usedInBullets));
+
+        setContent({ title: titleText, bullets: bulletsArr, description: "", searchTerms: "" });
+
+        // Step 3: Description
+        setPipelineStage("description");
+        const descRes = await fetch("/content-curator/api/generate-description", {
+          method: "POST",
+          headers: authHeaders,
+          body: JSON.stringify({
+            ...baseBody, skillContent: v2DescSkill, titleText, bulletsText: bulletsArr,
+            assignedKeywords: v2Assigned.description,
+            availablePool: v2Pool,
+            imageAnalysis,
+          }),
+        });
+        const descData = await descRes.json();
+        if (!descData.success) throw new Error(descData.error ?? "Description generation failed");
+        const descriptionText: string = descData.description ?? "";
+
+        const usedInDesc = scanUsed(descriptionText, [...v2Assigned.description, ...v2Pool]);
+        const finalRemaining = [
+          ...v2Assigned.description.filter((k) => !isUsedKw(k, usedInDesc)),
+          ...v2Pool.filter((k) => !isUsedKw(k, usedInDesc)),
+        ];
+
+        setContent({ title: titleText, bullets: bulletsArr, description: descriptionText, searchTerms: "" });
+        setRemainingKeywords(finalRemaining);
+        setUsedKeywordCounts(computeCounts([titleText, ...bulletsArr, descriptionText].join(" ")));
       }
-      setUsedKeywordCounts(counts);
+
     } catch (e) {
       setError(e instanceof Error ? e.message : "Generation failed. Please try again.");
     } finally {
@@ -243,8 +328,9 @@ export default function ContentCuratorPage() {
       setPipelineStage(null);
     }
   }, [
-    canGenerate, keywords, assignments, bulletCount, limits,
+    canGenerate, keywords, allKeywords, assignments, bulletCount, limits,
     notes, enableOccasion, occasion, productImage, getHeaders, skillContent,
+    pipelineVersion, computeCounts,
   ]);
 
   return (

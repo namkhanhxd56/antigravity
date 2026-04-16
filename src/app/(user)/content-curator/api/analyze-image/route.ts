@@ -4,7 +4,9 @@
  * Step 0 — Phân tích ảnh sản phẩm. Chạy 1 lần duy nhất, kết quả truyền cho
  * tất cả các bước sau. Không phân tích lại ở step 1-3.
  *
- * Body: { image: string (base64 data URL) }
+ * Body: { image: string (base64 data URL), skillImageContent?: string }
+ * skillImageContent: nội dung section ## IMAGE của skill (V2) —
+ *   nếu có, được prepend vào prompt để AI phân tích theo đặc thù sản phẩm.
  * Response: { success: true, analysis: ImageAnalysis }
  */
 
@@ -14,7 +16,7 @@ import { buildImageAnalysisPrompt } from "../../lib/promptBuilderV3";
 
 export async function POST(request: NextRequest) {
   try {
-    const { image } = await request.json();
+    const { image, skillImageContent } = await request.json();
 
     if (!image) {
       return NextResponse.json(
@@ -33,7 +35,10 @@ export async function POST(request: NextRequest) {
     }
 
     const model = request.headers.get("x-curator-model") || null;
-    const prompt = buildImageAnalysisPrompt();
+    const basePrompt = buildImageAnalysisPrompt();
+    const prompt = skillImageContent?.trim()
+      ? `${skillImageContent.trim()}\n\n---\n\n${basePrompt}`
+      : basePrompt;
 
     const rawResponse = await callAI({
       prompt,

@@ -422,11 +422,15 @@ export default function KeywordAssigner({
             V1 — Sequential
           </button>
           <button
-            disabled
-            title="Coming soon"
-            className="px-3 py-1.5 bg-white dark:bg-zinc-900 text-zinc-300 dark:text-zinc-600 cursor-not-allowed border-l border-zinc-200 dark:border-zinc-700"
+            onClick={() => onVersionChange?.("v2")}
+            disabled={isGenerating}
+            className={`px-3 py-1.5 transition-colors border-l border-zinc-200 dark:border-zinc-700 ${
+              pipelineVersion === "v2"
+                ? "bg-[#EA580C] text-white"
+                : "bg-white dark:bg-zinc-900 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800"
+            } disabled:cursor-not-allowed`}
           >
-            V2 — TBD
+            V2 — Cascade
           </button>
         </div>
       </div>
