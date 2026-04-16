@@ -53,7 +53,7 @@ export async function callAI(opts: AiCallOptions): Promise<string> {
       const project = credentials.project_id;
       const vertexAI = new VertexAI({ project, location: "us-central1", googleAuthOptions: { credentials } });
       const vModel = vertexAI.getGenerativeModel({
-        model: model || "gemini-1.5-flash-002",
+        model: model || "gemini-2.0-flash",
         generationConfig: { responseMimeType: mimeType as any, temperature },
       });
       const vParts: any[] = [{ text: prompt }];
@@ -72,7 +72,7 @@ export async function callAI(opts: AiCallOptions): Promise<string> {
       if (imgParts) vParts.unshift({ inlineData: imgParts });
       const res = await vertexExpressGenerate(
         vertexApiKey,
-        model || "gemini-2.0-flash-001",
+        model || "gemini-2.0-flash",
         [{ role: "user", parts: vParts }],
         { responseMimeType: mimeType, temperature }
       );
@@ -85,7 +85,7 @@ export async function callAI(opts: AiCallOptions): Promise<string> {
   // ─── Gemini AI Studio ─────────────────────────────────────────────────────
   const genAI = new GoogleGenerativeAI(apiKey!);
   const geminiModel = genAI.getGenerativeModel({
-    model: model || "gemini-2.5-flash-lite",
+    model: model || "gemini-2.0-flash",
     generationConfig: { responseMimeType: mimeType as any, temperature },
   });
   const aParts: any[] = [{ text: prompt }];

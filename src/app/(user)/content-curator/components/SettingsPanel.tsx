@@ -62,7 +62,7 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
     gemini: undefined,
   });
   const [inputs, setInputs] = useState<Record<string, string>>({});
-  const [selectedModel, setSelectedModel] = useState("gemini-2.0-flash-exp");
+  const [selectedModel, setSelectedModel] = useState("gemini-2.0-flash");
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const { limits, save: saveLimits } = useContentLimits();

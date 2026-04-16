@@ -403,6 +403,14 @@ export default function ContentCuratorPage() {
           usedKeywordCounts={usedKeywordCounts}
           pipelineVersion={pipelineVersion}
           onVersionChange={setPipelineVersion}
+          hasContent={!!content}
+          onClearContent={() => {
+            setContent(null);
+            setLiveTitle("");
+            setRemainingKeywords([]);
+            setUsedKeywordCounts({});
+            setError(null);
+          }}
         />
       </div>
 

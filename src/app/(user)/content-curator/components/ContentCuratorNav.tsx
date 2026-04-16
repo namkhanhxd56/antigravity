@@ -7,12 +7,11 @@ import { getCuratorModel } from "../lib/client-storage";
 import SettingsPanel from "./SettingsPanel";
 
 export const GEMINI_MODELS = [
-  { value: "gemini-2.5-flash-lite", label: "Gemini 2.5 Flash-Lite (Newest)" },
-  { value: "gemini-2.0-flash-exp", label: "Gemini 2.0 Flash (Experimental)" },
-  { value: "gemini-2.0-flash-thinking-exp", label: "Gemini 2.0 Thinking (Experimental)" },
+  { value: "gemini-2.5-flash", label: "Gemini 2.5 Flash (Latest)" },
+  { value: "gemini-2.5-flash-lite-preview-06-17", label: "Gemini 2.5 Flash Lite (Fast)" },
+  { value: "gemini-2.0-flash", label: "Gemini 2.0 Flash (Stable)" },
   { value: "gemini-1.5-flash", label: "Gemini 1.5 Flash (Legacy)" },
-  { value: "gemini-1.5-pro", label: "Gemini 1.5 Pro" },
-  { value: "gemini-2.0-pro-exp-02-05", label: "Gemini 2.0 Pro Experimental" },
+  { value: "gemini-1.5-pro", label: "Gemini 1.5 Pro (Legacy)" },
 ] as const;
 
 export type GeminiModel = (typeof GEMINI_MODELS)[number]["value"];
@@ -20,6 +19,8 @@ export type GeminiModel = (typeof GEMINI_MODELS)[number]["value"];
 export function getStoredModel(): GeminiModel {
   return (getCuratorModel() as GeminiModel) || "gemini-2.0-flash";
 }
+
+export const DEFAULT_MODEL = "gemini-2.0-flash";
 
 export default function ContentCuratorNav() {
   const { mode, setMode } = useCuratorMode();

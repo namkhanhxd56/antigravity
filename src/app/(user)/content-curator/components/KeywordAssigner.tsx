@@ -25,6 +25,10 @@ interface KeywordAssignerProps {
   usedKeywordCounts?: Record<string, number>;
   /** Active pipeline version */
   pipelineVersion?: PipelineVersion;
+  /** Callback to clear all generated content in ContentCanvas */
+  onClearContent?: () => void;
+  /** Whether there is content to clear */
+  hasContent?: boolean;
   /** Callback to change pipeline version */
   onVersionChange?: (v: PipelineVersion) => void;
 }
@@ -270,6 +274,8 @@ export default function KeywordAssigner({
   usedKeywordCounts = {},
   pipelineVersion = "v1",
   onVersionChange,
+  onClearContent,
+  hasContent = false,
 }: KeywordAssignerProps) {
   const parsedKeywords = useMemo(() => parseKeywordsWithVolume(keywords), [keywords]);
   const allKeywords = useMemo(() => parsedKeywords.map((p) => p.kw), [parsedKeywords]);
@@ -453,6 +459,18 @@ export default function KeywordAssigner({
           </>
         )}
       </button>
+
+      {/* Clear content button */}
+      {hasContent && (
+        <button
+          onClick={onClearContent}
+          disabled={isGenerating}
+          className="flex w-full items-center justify-center gap-2 rounded-lg border border-zinc-200 dark:border-zinc-700 py-2.5 text-[13px] font-medium text-zinc-500 dark:text-zinc-400 hover:border-red-300 dark:hover:border-red-800 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          <span className="material-symbols-outlined text-[16px]">delete_sweep</span>
+          Remove content
+        </button>
+      )}
     </div>
   );
 }
