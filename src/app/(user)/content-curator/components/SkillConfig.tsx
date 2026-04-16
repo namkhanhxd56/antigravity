@@ -144,18 +144,20 @@ export default function SkillConfig({
     onSkillSplit?.(skillName);
     onSkillContentLoaded?.(content);
 
-    // Write split sections to disk for local inspection (no-op on Vercel)
-    fetch("/content-curator/api/save-skill-local", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        skillName,
-        image: result.image,
-        title: result.title,
-        bullets: result.bullets,
-        description: result.description,
-      }),
-    }).catch(() => {/* silently ignore */});
+    // Write split sections to disk for local inspection only (no-op on Vercel)
+    if (process.env.NODE_ENV === "development") {
+      fetch("/content-curator/api/save-skill-local", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          skillName,
+          image: result.image,
+          title: result.title,
+          bullets: result.bullets,
+          description: result.description,
+        }),
+      }).catch(() => {/* silently ignore */});
+    }
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {

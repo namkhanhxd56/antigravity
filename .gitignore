@@ -47,3 +47,7 @@ next-env.d.ts
 # Xóa 2 dòng dưới để ẩn inspector khi push git:
 src/app/\(user\)/content-curator/components/DevInspector.tsx
 src/app/?user?/content-curator/api/preview-prompt/
+
+# ─── Skill local cache (auto-generated, local dev only) ──────────────────────
+src/app/\(user\)/content-curator/skills/skill_local/
+src/app/?user?/content-curator/skills/skill_local/
