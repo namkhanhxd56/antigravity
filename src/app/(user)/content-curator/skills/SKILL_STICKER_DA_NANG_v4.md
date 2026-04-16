@@ -127,7 +127,7 @@ Trình bày kết quả phân tích trước khi viết listing:
 - KHÔNG dùng emoji — Amazon không hỗ trợ ký tự đặc biệt
 - Header: IN HOA hoặc Title Case, 2-5 từ
 - Nội dung: nhồi keyword Exact/Phrase chưa dùng ở title, viết tự nhiên
-- Nên viết 200-350 ký tự/bullet
+- Nên viết trên 350 ký tự/bullet
 
 ### B. Template 5 Bullets
 
