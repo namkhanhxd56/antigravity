@@ -60,6 +60,7 @@ export default function ContentCuratorPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [liveTitle, setLiveTitle] = useState("");
+  const [hasCanvasContent, setHasCanvasContent] = useState(false);
 
   // ─── Keyword analytics ──────────────────────────────────────────────────────
   /** Keywords remaining after pipeline (for generic keywords suggestion) */
@@ -403,13 +404,11 @@ export default function ContentCuratorPage() {
           usedKeywordCounts={usedKeywordCounts}
           pipelineVersion={pipelineVersion}
           onVersionChange={setPipelineVersion}
-          hasContent={!!content}
+          hasContent={hasCanvasContent}
           onClearContent={() => {
-            setContent(null);
+            setContent({ title: "", bullets: ["", "", "", "", ""], description: "", searchTerms: "" });
             setLiveTitle("");
-            setRemainingKeywords([]);
-            setUsedKeywordCounts({});
-            setError(null);
+            setHasCanvasContent(false);
           }}
         />
       </div>
@@ -429,6 +428,9 @@ export default function ContentCuratorPage() {
             onContentChange={(live) => {
               if (mode !== "create") return;
               setLiveTitle(live.title);
+              setHasCanvasContent(
+                !!(live.title || live.bullets.some((b) => b.trim()) || live.description || live.searchTerms)
+              );
               // Recompute keyword usage — include searchTerms so generic keywords also highlight orange
               const fullText = [live.title, ...live.bullets, live.description, live.searchTerms ?? ""].join(" ");
               const counts: Record<string, number> = {};

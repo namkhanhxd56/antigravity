@@ -200,6 +200,7 @@ Occasions: birthdays, holidays, stocking stuffers, party favors, white elephant,
 ## DESCRIPTION
 
 ### Quy tắc
+- Viết bằng tiếng anh, tuân thủ quy định bán hàng trên Amazon
 - Nhồi keyword còn lại chưa dùng ở title + bullets
 - Viết dạng đoạn văn (paragraph), KHÔNG dùng bullet points
 - Viết đơn giản, dễ đọc — độ dài khuyến nghị: 500–1000 ký tự

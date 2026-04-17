@@ -374,7 +374,6 @@ export default function KeywordAssigner({
               volume={volumeMap[kw.toLowerCase()] ?? null}
               usedCount={usedKeywordCounts[kw.toLowerCase()] ?? 0}
               onDragStart={() => handleDragStart(kw)}
-              onRemove={() => handleDismiss(kw)}
             />
           ))}
         </div>
@@ -460,17 +459,15 @@ export default function KeywordAssigner({
         )}
       </button>
 
-      {/* Clear content button */}
-      {hasContent && (
-        <button
-          onClick={onClearContent}
-          disabled={isGenerating}
-          className="flex w-full items-center justify-center gap-2 rounded-lg border border-zinc-200 dark:border-zinc-700 py-2.5 text-[13px] font-medium text-zinc-500 dark:text-zinc-400 hover:border-red-300 dark:hover:border-red-800 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          <span className="material-symbols-outlined text-[16px]">delete_sweep</span>
-          Remove content
-        </button>
-      )}
+      {/* Clear content button — always visible, disabled when canvas is empty */}
+      <button
+        onClick={onClearContent}
+        disabled={isGenerating || !hasContent}
+        className="flex w-full items-center justify-center gap-2 rounded-lg border border-zinc-200 dark:border-zinc-700 py-2.5 text-[13px] font-medium text-zinc-500 dark:text-zinc-400 hover:border-red-300 dark:hover:border-red-800 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:border-zinc-200 disabled:hover:bg-transparent disabled:hover:text-zinc-500"
+      >
+        <span className="material-symbols-outlined text-[16px]">delete_sweep</span>
+        Clear content
+      </button>
     </div>
   );
 }
