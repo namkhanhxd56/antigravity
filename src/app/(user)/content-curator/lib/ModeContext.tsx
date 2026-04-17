@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, ReactNode } from "react";
 
-export type CuratorMode = "create" | "compare";
+export type CuratorMode = "create" | "compare" | "competitor";
 
 interface ModeContextType {
   mode: CuratorMode;

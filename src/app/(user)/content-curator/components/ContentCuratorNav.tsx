@@ -61,6 +61,13 @@ export default function ContentCuratorNav() {
             <span className="material-symbols-outlined text-[16px]">radar</span>
             Compare
           </button>
+          <button
+            onClick={() => setMode("competitor")}
+            className={`px-4 py-1 flex items-center gap-1.5 text-[13px] font-semibold rounded-md transition-colors ${mode === "competitor" ? "bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-sm" : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300"}`}
+          >
+            <span className="material-symbols-outlined text-[16px]">content_copy</span>
+            Competitor
+          </button>
         </div>
 
         <div className="flex items-center gap-2 border-l border-zinc-200 dark:border-zinc-800 pl-6 ml-2">

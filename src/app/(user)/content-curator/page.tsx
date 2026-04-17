@@ -5,6 +5,7 @@ import ProductAsset from "./components/ProductAsset";
 import SkillConfig from "./components/SkillConfig";
 import ContentCanvas from "./components/ContentCanvas";
 import CompareView from "./components/CompareView";
+import CompetitorView, { type CompetitorInput } from "./components/CompetitorView";
 import KeywordAssigner, { type KeywordAssignments } from "./components/KeywordAssigner";
 import KeywordCoverage from "./components/KeywordCoverage";
 import { getCuratorHeaders } from "./lib/curator-keys";
@@ -61,6 +62,11 @@ export default function ContentCuratorPage() {
   const [error, setError] = useState<string | null>(null);
   const [liveTitle, setLiveTitle] = useState("");
   const [hasCanvasContent, setHasCanvasContent] = useState(false);
+
+  // ─── Competitor mode state ───────────────────────────────────────────────────
+  const [competitorContent, setCompetitorContent] = useState<ContentListing | null>(null);
+  const [isGeneratingCompetitor, setIsGeneratingCompetitor] = useState(false);
+  const [hasCompetitorContent, setHasCompetitorContent] = useState(false);
 
   // ─── Keyword analytics ──────────────────────────────────────────────────────
   /** Keywords remaining after pipeline (for generic keywords suggestion) */
@@ -334,6 +340,60 @@ export default function ContentCuratorPage() {
     pipelineVersion, computeCounts,
   ]);
 
+  const handleGenerateCompetitor = useCallback(async (input: CompetitorInput) => {
+    setIsGeneratingCompetitor(true);
+    setError(null);
+    setCompetitorContent(null);
+
+    const authHeaders = getHeaders();
+
+    try {
+      // Step 0: analyze-image (optional)
+      let imageAnalysis: ImageAnalysis | null = null;
+      if (productImage) {
+        const imgRes = await fetch("/content-curator/api/analyze-image", {
+          method: "POST",
+          headers: authHeaders,
+          body: JSON.stringify({ image: productImage }),
+        });
+        const imgData = await imgRes.json();
+        if (imgData.success) imageAnalysis = imgData.analysis;
+      }
+
+      // Step 1: generate from competitor
+      const res = await fetch("/content-curator/api/generate-competitor", {
+        method: "POST",
+        headers: authHeaders,
+        body: JSON.stringify({
+          competitorTitle: input.title,
+          competitorBullets: input.bullets,
+          competitorDescription: input.description,
+          keywords: allKeywords,
+          imageAnalysis,
+          bulletCount,
+          limits,
+          model: getStoredModel(),
+        }),
+      });
+
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error ?? "Generation failed");
+
+      const result: ContentListing = {
+        title: data.title ?? "",
+        bullets: data.bullets ?? [],
+        description: data.description ?? "",
+        searchTerms: "",
+      };
+      setCompetitorContent(result);
+      setUsedKeywordCounts(computeCounts([result.title, ...result.bullets, result.description].join(" ")));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Competitor generation failed.");
+    } finally {
+      setIsGeneratingCompetitor(false);
+    }
+  }, [allKeywords, bulletCount, limits, productImage, getHeaders, computeCounts]);
+
   return (
     <div className="flex flex-col lg:flex-row h-full w-full divide-y lg:divide-y-0 lg:divide-x divide-zinc-200 dark:divide-zinc-800">
 
@@ -364,22 +424,24 @@ export default function ContentCuratorPage() {
           usedKeywordCounts={usedKeywordCounts}
         />
 
-        <SkillConfig
-          selectedSkill={selectedSkill}
-          onSkillChange={setSelectedSkill}
-          enableOccasion={enableOccasion}
-          onEnableOccasionChange={setEnableOccasion}
-          occasion={occasion}
-          onOccasionChange={setOccasion}
-          notes={notes}
-          onNotesChange={setNotes}
-          onGenerate={() => {}}
-          isGenerating={false}
-          canGenerate={false}
-          onSkillSplit={() => {}}
-          onSkillContentLoaded={setSkillContent}
-          showGenerateButton={false}
-        />
+        {mode !== "competitor" && (
+          <SkillConfig
+            selectedSkill={selectedSkill}
+            onSkillChange={setSelectedSkill}
+            enableOccasion={enableOccasion}
+            onEnableOccasionChange={setEnableOccasion}
+            occasion={occasion}
+            onOccasionChange={setOccasion}
+            notes={notes}
+            onNotesChange={setNotes}
+            onGenerate={() => {}}
+            isGenerating={false}
+            canGenerate={false}
+            onSkillSplit={() => {}}
+            onSkillContentLoaded={setSkillContent}
+            showGenerateButton={false}
+          />
+        )}
 
         {error && (
           <div className="bg-red-50 dark:bg-red-950/30 px-5 py-4 text-[13px] text-red-700 dark:text-red-400">
@@ -390,8 +452,19 @@ export default function ContentCuratorPage() {
         {/* Remaining Keywords hidden — highlights shown in Keyword Assigner */}
       </div>
 
-      {/* ── Col 2: Keyword Assigner + Generate ───────────────────────────── */}
+      {/* ── Col 2: Keyword Assigner / Competitor Form ────────────────────── */}
       <div className="flex flex-col w-full lg:w-[400px] shrink-0 min-h-[500px] h-full overflow-y-auto">
+        {mode === "competitor" ? (
+          <CompetitorView
+            onGenerate={handleGenerateCompetitor}
+            isGenerating={isGeneratingCompetitor}
+            hasContent={hasCompetitorContent}
+            onClearContent={() => {
+              setCompetitorContent({ title: "", bullets: ["", "", "", "", ""], description: "", searchTerms: "" });
+              setHasCompetitorContent(false);
+            }}
+          />
+        ) : (
         <KeywordAssigner
           keywords={keywords}
           assignments={assignments as KeywordAssignments}
@@ -411,6 +484,7 @@ export default function ContentCuratorPage() {
             setHasCanvasContent(false);
           }}
         />
+        )}
       </div>
 
       {/* ── Col 3: Content Canvas ─────────────────────────────────────────── */}
@@ -448,6 +522,31 @@ export default function ContentCuratorPage() {
             myTitle={liveTitle}
             onMyTitleChange={setLiveTitle}
             bankKeywords={keywords}
+          />
+        </div>
+        <div className={mode !== "competitor" ? "hidden" : ""}>
+          <ContentCanvas
+            content={competitorContent}
+            isGenerating={isGeneratingCompetitor}
+            generatingSection={isGeneratingCompetitor ? "title" : null}
+            bankKeywords={keywords}
+            skillName={selectedSkill}
+            remainingKeywords={[]}
+            usedKeywordCounts={usedKeywordCounts}
+            onContentChange={(live) => {
+              if (mode !== "competitor") return;
+              setHasCompetitorContent(
+                !!(live.title || live.bullets.some((b) => b.trim()) || live.description || live.searchTerms)
+              );
+              const fullText = [live.title, ...live.bullets, live.description, live.searchTerms ?? ""].join(" ");
+              const counts: Record<string, number> = {};
+              for (const kw of allKeywords) {
+                const escaped = kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+                const matches = fullText.match(new RegExp(escaped, "gi"));
+                if (matches?.length) counts[kw.toLowerCase()] = matches.length;
+              }
+              setUsedKeywordCounts(counts);
+            }}
           />
         </div>
       </div>
