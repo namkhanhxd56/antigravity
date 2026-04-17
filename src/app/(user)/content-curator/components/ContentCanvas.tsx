@@ -715,7 +715,7 @@ function BulletItem({
             textClassName="text-[13px] text-zinc-700 dark:text-zinc-300 leading-relaxed placeholder:text-zinc-400"
             paddingClassName="py-2.5 pr-3"
             placeholder={`Bullet point ${idx + 1}…`}
-            minHeight="48px"
+            minHeight="88px"
           />
         </div>
       </div>
