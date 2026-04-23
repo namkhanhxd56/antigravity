@@ -271,7 +271,7 @@ export default function StickerGeneratorPage() {
                   id: crypto.randomUUID(),
                   imageUrl,
                   prompt,
-                  modelId: "piapi/flux1-schnell",
+                  modelId: "piapi-flux",
                 });
               }
             } else if (status === "failed") {
