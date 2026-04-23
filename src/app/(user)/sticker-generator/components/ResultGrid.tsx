@@ -5,6 +5,12 @@ import type { StickerResult } from "../lib/types";
 import { getStickerKey } from "../lib/sticker-keys";
 import { refineAlpha } from "../lib/alpha-postprocess";
 import { getUsePiapiRemoveBg } from "../lib/client-storage";
+import {
+  isFileSystemAccessSupported,
+  pickDirectory,
+  writeImageFile,
+  dataUrlToBlob,
+} from "../lib/fs-access";
 
 interface ResultGridProps {
   results: StickerResult[];
@@ -443,6 +449,7 @@ export default function ResultGrid({
   const [removingBgId, setRemovingBgId] = useState<string | null>(null);
   const [refiningId, setRefiningId] = useState<string | null>(null);
   const [refinePrompt, setRefinePrompt] = useState<string>("");
+  const libraryDirRef = useRef<FileSystemDirectoryHandle | null>(null);
 
   const showSkeletons = isGenerating && results.length === 0;
   const showEmpty = !isGenerating && results.length === 0;
@@ -648,6 +655,31 @@ export default function ResultGrid({
                           onClick={() => onDelete(result.id)}
                           hoverColor="hover:text-red-500 hover:border-red-300"
                         />
+                        {isFileSystemAccessSupported() && (
+                          <ActionButton
+                            icon="photo_library"
+                            label="Lưu vào Library"
+                            onClick={async () => {
+                              try {
+                                // Check if we already have a saved handle in the ref
+                                let dir = libraryDirRef.current;
+                                if (!dir) {
+                                  dir = await pickDirectory();
+                                  libraryDirRef.current = dir;
+                                }
+                                const blob = dataUrlToBlob(result.imageUrl);
+                                const filename = `sticker-${result.id.slice(0, 8)}.png`;
+                                await writeImageFile(dir, filename, blob);
+                                alert(`Đã lưu ${filename} vào ${dir.name}/`);
+                              } catch (err) {
+                                if ((err as Error).name !== "AbortError") {
+                                  console.error(err);
+                                  alert("Lỗi khi lưu: " + (err as Error).message);
+                                }
+                              }
+                            }}
+                          />
+                        )}
                       </div>
                     )}
                   </div>

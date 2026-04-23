@@ -27,6 +27,14 @@ export default function StickerNav() {
             Home
           </Link>
 
+          <Link
+            href="/sticker-generator/library"
+            className="px-4 py-1.5 flex items-center gap-1.5 text-[13px] font-semibold rounded-md transition-colors text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-white"
+          >
+            <span className="material-symbols-outlined text-[16px]">photo_library</span>
+            Library
+          </Link>
+
           <div className="flex items-center gap-2 border-l border-zinc-200 dark:border-zinc-800 pl-6 ml-2">
             <button
               onClick={() => setIsSettingsOpen(true)}
