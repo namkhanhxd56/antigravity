@@ -147,23 +147,52 @@ export const geminiProvider: AIProvider = {
       const generatePromises = Array.from(
         { length: request.variations },
         async (_, i) => {
-          // Build prompt: prioritize text description over reference image
-          // The prompt instructs the model to treat the image as LOW-WEIGHT inspiration only
-          const textPrompt = [
-            request.prompt,
-            "",
-            "[IMPORTANT] The reference image below is ONLY for thematic inspiration.",
-            "DO NOT replicate its layout, composition, or pose.",
-            "Create an ENTIRELY NEW design based on the text descriptions above.",
-            `This is variation ${i + 1} of ${request.variations} — make each variation visually distinct.`,
-          ].join("\n");
+          // Detect whether this is an edit/refine request (prompt starts with [INSTRUCTION])
+          const isEditRequest = request.prompt.includes("[INSTRUCTION]");
+
+          let textPrompt: string;
+          if (isEditRequest && request.referenceImage) {
+            // Edit mode: read the image + apply the user's modification
+            textPrompt = [
+              request.prompt,
+              "",
+              "[IMPORTANT] You MUST look at the attached reference image carefully.",
+              "Apply the requested modifications to this image while preserving its overall style and identity.",
+              "Output a single modified sticker image.",
+            ].join("\n");
+          } else {
+            // New generation mode
+            textPrompt = [
+              request.prompt,
+              "",
+              request.referenceImage
+                ? "[IMPORTANT] The reference image below is ONLY for thematic inspiration."
+                : "",
+              request.referenceImage
+                ? "DO NOT replicate its layout, composition, or pose."
+                : "",
+              "Create an ENTIRELY NEW design based on the text descriptions above.",
+              `This is variation ${i + 1} of ${request.variations} — make each variation visually distinct.`,
+            ].filter(Boolean).join("\n");
+          }
 
           const parts: (
             | string
             | { inlineData: { mimeType: string; data: string } }
           )[] = [textPrompt];
 
-
+          // Attach reference image if available
+          if (request.referenceImage) {
+            const imgData = request.referenceImage.startsWith("data:")
+              ? request.referenceImage.split(",")[1]
+              : request.referenceImage;
+            parts.push({
+              inlineData: {
+                mimeType: "image/png",
+                data: imgData,
+              },
+            });
+          }
 
           const result = await model.generateContent(parts);
           const response = result.response;

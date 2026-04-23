@@ -109,21 +109,41 @@ export const vertexApiKeyProvider: AIProvider = {
       const generatePromises = Array.from(
         { length: request.variations },
         async (_, i) => {
-          const textPrompt = [
-            request.prompt,
-            "",
-            "[IMPORTANT] The reference image below is ONLY for thematic inspiration.",
-            "DO NOT replicate its layout, composition, or pose.",
-            "Create an ENTIRELY NEW design based on the text descriptions.",
-            `Variation ${i + 1} of ${request.variations}`,
-          ].join("\n");
+          const isEditRequest = request.prompt.includes("[INSTRUCTION]");
+
+          let textPrompt: string;
+          if (isEditRequest && request.referenceImage) {
+            textPrompt = [
+              request.prompt,
+              "",
+              "[IMPORTANT] You MUST look at the attached reference image carefully.",
+              "Apply the requested modifications to this image while preserving its overall style and identity.",
+              "Output a single modified sticker image.",
+            ].join("\n");
+          } else {
+            textPrompt = [
+              request.prompt,
+              "",
+              request.referenceImage
+                ? "[IMPORTANT] The reference image below is ONLY for thematic inspiration."
+                : "",
+              request.referenceImage
+                ? "DO NOT replicate its layout, composition, or pose."
+                : "",
+              "Create an ENTIRELY NEW design based on the text descriptions.",
+              `Variation ${i + 1} of ${request.variations}`,
+            ].filter(Boolean).join("\n");
+          }
 
           const parts: Array<{ text?: string; inlineData?: { mimeType: string; data: string } }> = [
             { text: textPrompt },
           ];
           if (request.referenceImage) {
+            const imgData = request.referenceImage.startsWith("data:")
+              ? request.referenceImage.split(",")[1]
+              : request.referenceImage;
             parts.push({
-              inlineData: { mimeType: "image/png", data: request.referenceImage },
+              inlineData: { mimeType: "image/png", data: imgData },
             });
           }
 
