@@ -191,27 +191,6 @@ export default function SourceSidebar({
         {isAnalyzing ? "Analyzing..." : "Analyze Sticker"}
       </button>
 
-      {/* Sidebar Nav */}
-      <nav className="mt-auto space-y-1">
-        <a
-          className="flex items-center gap-3 px-3 py-2 bg-primary/10 text-primary rounded-lg font-semibold"
-          href="/sticker-generator"
-        >
-          <span className="material-symbols-outlined text-[20px]">
-            dashboard
-          </span>
-          Dashboard
-        </a>
-        <a
-          className="flex items-center gap-3 px-3 py-2 text-slate-600 hover:bg-slate-100 rounded-lg font-medium transition-colors"
-          href="#"
-        >
-          <span className="material-symbols-outlined text-[20px]">
-            collections
-          </span>
-          Library
-        </a>
-      </nav>
     </aside>
   );
 }
