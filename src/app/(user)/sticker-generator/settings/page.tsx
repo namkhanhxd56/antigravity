@@ -45,6 +45,14 @@ const PROVIDERS: ProviderConfig[] = [
     placeholder: '{ "type": "service_account", ... }',
     isJson: true,
   },
+  {
+    type: "piapi",
+    name: "PiAPI (Super Resolution & Flux)",
+    icon: "api",
+    description: "API Key from piapi.ai used for Upscaling and Flux Generation",
+    docsUrl: "https://piapi.ai/workspace/api-key",
+    placeholder: "piapi_...",
+  },
 ];
 
 const maskKey = (key: string): string => {
@@ -57,6 +65,7 @@ export default function StickerSettingsPage() {
     "vertex-json": undefined,
     vertex: undefined,
     gemini: undefined,
+    piapi: undefined,
   });
   const [inputs, setInputs] = useState<Record<string, string>>({});
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -66,6 +75,7 @@ export default function StickerSettingsPage() {
       "vertex-json": getStickerKey("vertex-json"),
       vertex: getStickerKey("vertex"),
       gemini: getStickerKey("gemini"),
+      piapi: getStickerKey("piapi"),
     });
   }, []);
 
