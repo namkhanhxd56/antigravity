@@ -243,7 +243,9 @@ export async function processBatch(
     const baseName = img.name.replace(/\.[^.]+$/, "");
 
     try {
-      let currentUrl = img.url;
+      // Convert the local object URL (blob:) to a base64 Data URL
+      // PiAPI backend cannot read local blob: URLs, it needs base64.
+      let currentUrl = await urlToDataUrl(img.url);
 
       // ── Step 1: Upscale if needed ───────────────────────────────────
       if (img.needsUpscale && piapiKey) {
