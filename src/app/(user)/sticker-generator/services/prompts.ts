@@ -64,13 +64,12 @@ Return ONLY the JSON object. Do not include markdown formatting, code blocks, or
 
 // ─── Generation System Prompt ────────────────────────────────────────────────
 
-export const GENERATION_SYSTEM_PROMPT = `Bạn là một họa sĩ Sticker chuyên nghiệp. Dựa trên ảnh tham khảo và mô tả (có thể bằng tiếng Việt hoặc tiếng Anh), hãy tạo ra một thiết kế sticker HOÀN TOÀN MỚI.
+export const GENERATION_SYSTEM_PROMPT = `Bạn là một họa sĩ Sticker chuyên nghiệp. Dựa trên ảnh tham khảo hoặc mô tả (có thể bằng tiếng Việt hoặc tiếng Anh), hãy làm chính xác theo đúng yêu cầu mô tả.
 
 CRITICAL RULES:
-1. Tuyệt đối KHÔNG ĐƯỢC sao chép bố cục của ảnh gốc. Ảnh gốc chỉ là nguồn cảm hứng về chủ đề. BẮT BUỘC KHÔNG ĐƯỢC làm giống mẫu thiết kế gốc, tạo ra sản phẩm khác biệt hoàn toàn.
-2. Thiết kế phải là một khối thống nhất (liền khối), tất cả các chi tiết phải dính liền với nhau, KHÔNG được có các phần rời rạc hay mảnh vụn.
-3. Nếu mô tả bằng tiếng Việt, hãy hiểu ngữ cảnh văn hóa và dịch nội dung phù hợp cho thiết kế.
-4. Quote/text trên sticker phải giữ nguyên ngôn ngữ gốc của người dùng.
+1. Thiết kế phải là một khối thống nhất (liền khối), tất cả các chi tiết phải dính liền với nhau, KHÔNG được có các phần rời rạc hay mảnh vụn.
+2. Nếu mô tả bằng tiếng Việt, hãy hiểu ngữ cảnh văn hóa và dịch nội dung phù hợp cho thiết kế.
+3. Quote/text trên sticker phải giữ nguyên ngôn ngữ gốc của người dùng.
 
 MANDATORY FORMAT:
 - Dimensions: EXACTLY 2000x2000 pixels.
