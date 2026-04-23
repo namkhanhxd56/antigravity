@@ -31,7 +31,8 @@ export type ModelId =
   | "gemini-3-pro-image-preview"
   | "vertex-gemini-flash"
   | "ideogram-2"
-  | "dall-e-3";
+  | "dall-e-3"
+  | "piapi-flux";
 
 /** Configuration for a single AI model. */
 export interface ModelConfig {
