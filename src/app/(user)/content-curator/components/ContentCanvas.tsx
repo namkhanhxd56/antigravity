@@ -38,6 +38,8 @@ interface ContentCanvasProps {
   remainingKeywords?: string[];
   /** Count of occurrences per keyword in generated content (same as KeywordAssigner colors) */
   usedKeywordCounts?: Record<string, number>;
+  /** Append a keyword to Generic Search Keywords field. Fire by changing id. */
+  searchTermAppendTrigger?: { kw: string; id: number } | null;
 }
 
 // ─── RewriteBar ───────────────────────────────────────────────────────────────
@@ -108,7 +110,7 @@ function Counter({ current, max }: { current: number; max: number }) {
   );
 }
 
-export default function ContentCanvas({ content, isGenerating, onContentChange, bankKeywords = "", skillName = "Editorial_Pro_V2.md", titleOverride, generatingSection, remainingKeywords = [], usedKeywordCounts = {} }: ContentCanvasProps) {
+export default function ContentCanvas({ content, isGenerating, onContentChange, bankKeywords = "", skillName = "Editorial_Pro_V2.md", titleOverride, generatingSection, remainingKeywords = [], usedKeywordCounts = {}, searchTermAppendTrigger }: ContentCanvasProps) {
   // V3 pipeline: per-section generating flags
   const titleGenerating = generatingSection !== undefined
     ? (isGenerating && generatingSection === "title")
@@ -125,6 +127,17 @@ export default function ContentCanvas({ content, isGenerating, onContentChange, 
   const [description, setDescription] = useState("");
   const [searchTerms, setSearchTerms] = useState("");
   const [showCopyPopup, setShowCopyPopup] = useState(false);
+
+  // Append keyword to searchTerms when trigger fires (id change = new trigger)
+  useEffect(() => {
+    if (!searchTermAppendTrigger) return;
+    const { kw } = searchTermAppendTrigger;
+    setSearchTerms((prev) => {
+      const trimmed = prev.trim();
+      return trimmed ? `${trimmed} ${kw}` : kw;
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchTermAppendTrigger?.id]);
 
   // ── Column customizer state ──
   const [columns, setColumns] = useState<Column[]>(() => buildDefaultColumns(5));

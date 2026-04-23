@@ -4,6 +4,7 @@ import React, { useState, useCallback, useRef } from "react";
 import type { StickerResult } from "../lib/types";
 import { getStickerKey } from "../lib/sticker-keys";
 import { refineAlpha } from "../lib/alpha-postprocess";
+import { getUsePiapiRemoveBg } from "../lib/client-storage";
 
 interface ResultGridProps {
   results: StickerResult[];
@@ -297,50 +298,59 @@ function LightboxModal({
   const handleRemoveBg = async () => {
     setIsProcessing(true);
     try {
-      const piapiKey = getStickerKey("piapi") || "";
-      const res = await fetch('/api/piapi/remove-bg', {
-        method: 'POST',
-        headers: { 
-           'Content-Type': 'application/json',
-           'x-piapi-key': piapiKey
-        },
-        body: JSON.stringify({ image: displayUrl })
-      });
-      const data = await res.json();
-      if (!data.taskId) throw new Error(data.error || "Missing taskId");
+      const usePiapi = getUsePiapiRemoveBg();
 
-      let status = "pending";
-      let finalImageUrl = "";
-      while (status === "pending" || status === "processing" || status === "starting") {
-        await new Promise(r => setTimeout(r, 3000));
-        const statusRes = await fetch(`/api/piapi/status/${data.taskId}`, {
-           headers: { 'x-piapi-key': piapiKey }
+      if (usePiapi) {
+        // ── PiAPI path ──
+        const piapiKey = getStickerKey("piapi") || "";
+        const res = await fetch('/api/piapi/remove-bg', {
+          method: 'POST',
+          headers: { 
+             'Content-Type': 'application/json',
+             'x-piapi-key': piapiKey
+          },
+          body: JSON.stringify({ image: displayUrl })
         });
-        const statusData = await statusRes.json();
-        if (statusData.code !== 200) throw new Error("Status check failed");
-        status = statusData.data.status;
-        if (status === "completed") {
-          finalImageUrl = statusData.data.output?.image_url || statusData.data.output?.image;
-        } else if (status === "failed") {
-          throw new Error("Remove background failed on PiAPI server.");
-        }
-      }
+        const data = await res.json();
+        if (!data.taskId) throw new Error(data.error || "Missing taskId");
 
-      if (finalImageUrl) {
-        const imgRes = await fetch(finalImageUrl);
-        const blob = await imgRes.blob();
-        const reader = new FileReader();
-        reader.onloadend = async () => {
-          const rawDataUrl = reader.result as string;
-          // Post-process: erode 3px + smooth 1px to remove fringe
+        let status = "pending";
+        let finalImageUrl = "";
+        while (status === "pending" || status === "processing" || status === "starting") {
+          await new Promise(r => setTimeout(r, 3000));
+          const statusRes = await fetch(`/api/piapi/status/${data.taskId}`, {
+             headers: { 'x-piapi-key': piapiKey }
+          });
+          const statusData = await statusRes.json();
+          if (statusData.code !== 200) throw new Error("Status check failed");
+          status = statusData.data.status;
+          if (status === "completed") {
+            finalImageUrl = statusData.data.output?.image_url || statusData.data.output?.image;
+          } else if (status === "failed") {
+            throw new Error("Remove background failed on PiAPI server.");
+          }
+        }
+
+        if (finalImageUrl) {
+          const imgRes = await fetch(finalImageUrl);
+          const blob = await imgRes.blob();
+          const rawDataUrl = await new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.readAsDataURL(blob);
+          });
           const refined = await refineAlpha(rawDataUrl, 3, 1);
           setDisplayUrl(refined);
-        };
-        reader.readAsDataURL(blob);
+        }
+      } else {
+        // ── Local path (old method + refineAlpha) ──
+        const rawResult = await exportPrintReadyPNG(displayUrl);
+        const refined = await refineAlpha(rawResult, 3, 1);
+        setDisplayUrl(refined);
       }
     } catch (err) {
       console.error(err);
-      alert("Lỗi khi tách nền qua PiAPI: " + (err as Error).message);
+      alert("Lỗi khi tách nền: " + (err as Error).message);
     } finally { setIsProcessing(false); }
   }
 
@@ -447,37 +457,41 @@ export default function ResultGrid({
   const handleRemoveBg = useCallback(async (result: StickerResult) => {
     setRemovingBgId(result.id);
     try {
-      const piapiKey = getStickerKey("piapi") || "";
-      const res = await fetch('/api/piapi/remove-bg', {
-        method: 'POST',
-        headers: { 
-           'Content-Type': 'application/json',
-           'x-piapi-key': piapiKey
-        },
-        body: JSON.stringify({ image: result.imageUrl })
-      });
-      const data = await res.json();
-      if (!data.taskId) throw new Error(data.error || "Missing taskId");
+      const usePiapi = getUsePiapiRemoveBg();
+      let resultDataUrl: string;
 
-      let status = "pending";
-      let finalImageUrl = "";
-      while (status === "pending" || status === "processing" || status === "starting") {
-        await new Promise(r => setTimeout(r, 3000));
-        const statusRes = await fetch(`/api/piapi/status/${data.taskId}`, {
-           headers: { 'x-piapi-key': piapiKey }
+      if (usePiapi) {
+        // ── PiAPI path ──
+        const piapiKey = getStickerKey("piapi") || "";
+        const res = await fetch('/api/piapi/remove-bg', {
+          method: 'POST',
+          headers: { 
+             'Content-Type': 'application/json',
+             'x-piapi-key': piapiKey
+          },
+          body: JSON.stringify({ image: result.imageUrl })
         });
-        const statusData = await statusRes.json();
-        if (statusData.code !== 200) throw new Error("Status check failed");
-        status = statusData.data.status;
-        if (status === "completed") {
-          finalImageUrl = statusData.data.output?.image_url || statusData.data.output?.image;
-        } else if (status === "failed") {
-          throw new Error("Remove background failed on PiAPI server.");
-        }
-      }
+        const data = await res.json();
+        if (!data.taskId) throw new Error(data.error || "Missing taskId");
 
-      if (finalImageUrl) {
-        // Fetch and refine alpha to remove fringe
+        let status = "pending";
+        let finalImageUrl = "";
+        while (status === "pending" || status === "processing" || status === "starting") {
+          await new Promise(r => setTimeout(r, 3000));
+          const statusRes = await fetch(`/api/piapi/status/${data.taskId}`, {
+             headers: { 'x-piapi-key': piapiKey }
+          });
+          const statusData = await statusRes.json();
+          if (statusData.code !== 200) throw new Error("Status check failed");
+          status = statusData.data.status;
+          if (status === "completed") {
+            finalImageUrl = statusData.data.output?.image_url || statusData.data.output?.image;
+          } else if (status === "failed") {
+            throw new Error("Remove background failed on PiAPI server.");
+          }
+        }
+
+        if (!finalImageUrl) throw new Error("No output URL from PiAPI");
         const imgRes = await fetch(finalImageUrl);
         const blob = await imgRes.blob();
         const rawDataUrl = await new Promise<string>((resolve) => {
@@ -485,12 +499,17 @@ export default function ResultGrid({
           reader.onloadend = () => resolve(reader.result as string);
           reader.readAsDataURL(blob);
         });
-        const refined = await refineAlpha(rawDataUrl, 3, 1);
-        downloadDataUrl(refined, `sticker-${result.id.slice(0, 8)}-nobg.png`);
+        resultDataUrl = await refineAlpha(rawDataUrl, 3, 1);
+      } else {
+        // ── Local path (old method + refineAlpha) ──
+        const rawResult = await exportPrintReadyPNG(result.imageUrl);
+        resultDataUrl = await refineAlpha(rawResult, 3, 1);
       }
+
+      downloadDataUrl(resultDataUrl, `sticker-${result.id.slice(0, 8)}-nobg.png`);
     } catch (err) {
       console.error("Remove BG failed:", err);
-      alert("Lỗi khi tách nền qua PiAPI: " + (err as Error).message);
+      alert("Lỗi khi tách nền: " + (err as Error).message);
     } finally {
       setRemovingBgId(null);
     }

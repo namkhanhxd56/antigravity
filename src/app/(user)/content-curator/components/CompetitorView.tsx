@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { KwTag, parseKeywordsWithVolume } from "./KwTag";
 
 export interface CompetitorInput {
   asin: string;
@@ -14,6 +15,9 @@ interface CompetitorViewProps {
   isGenerating: boolean;
   hasContent: boolean;
   onClearContent: () => void;
+  keywords: string;
+  usedKeywordCounts: Record<string, number>;
+  onAddToGenericKeywords: (kw: string) => void;
 }
 
 export default function CompetitorView({
@@ -21,11 +25,16 @@ export default function CompetitorView({
   isGenerating,
   hasContent,
   onClearContent,
+  keywords,
+  usedKeywordCounts,
+  onAddToGenericKeywords,
 }: CompetitorViewProps) {
   const [asin, setAsin] = useState("");
   const [title, setTitle] = useState("");
   const [bullets, setBullets] = useState("");
   const [description, setDescription] = useState("");
+
+  const kwList = useMemo(() => parseKeywordsWithVolume(keywords), [keywords]);
 
   const canGenerate = !!(title.trim() || bullets.trim() || description.trim());
 
@@ -133,6 +142,25 @@ export default function CompetitorView({
           <span className="material-symbols-outlined text-[16px]">delete_sweep</span>
           Clear content
         </button>
+
+        {kwList.length > 0 && (
+          <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800 flex flex-col gap-2">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+              Keywords
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {kwList.map(({ kw, volume }) => (
+                <KwTag
+                  key={kw}
+                  kw={kw}
+                  volume={volume}
+                  usedCount={usedKeywordCounts[kw.toLowerCase()] ?? 0}
+                  onClickCard={onAddToGenericKeywords}
+                />
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

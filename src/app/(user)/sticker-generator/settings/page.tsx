@@ -8,6 +8,7 @@ import {
   removeStickerKey,
   type StickerKeyType,
 } from "../lib/sticker-keys";
+import { getUsePiapiRemoveBg, setUsePiapiRemoveBg } from "../lib/client-storage";
 
 interface ProviderConfig {
   type: StickerKeyType;
@@ -69,6 +70,7 @@ export default function StickerSettingsPage() {
   });
   const [inputs, setInputs] = useState<Record<string, string>>({});
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [usePiapiRmbg, setUsePiapiRmbg] = useState(false);
 
   useEffect(() => {
     setConfiguredKeys({
@@ -77,6 +79,7 @@ export default function StickerSettingsPage() {
       gemini: getStickerKey("gemini"),
       piapi: getStickerKey("piapi"),
     });
+    setUsePiapiRmbg(getUsePiapiRemoveBg());
   }, []);
 
   const handleSave = (type: StickerKeyType, isJson?: boolean) => {
@@ -158,6 +161,32 @@ export default function StickerSettingsPage() {
               </p>
             </div>
           </div>
+        </div>
+
+        {/* PiAPI Remove BG Toggle */}
+        <div className="bg-white rounded-xl border border-slate-300 shadow-sm p-5">
+          <label className="flex items-start gap-4 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={usePiapiRmbg}
+              onChange={(e) => {
+                setUsePiapiRmbg(e.target.checked);
+                setUsePiapiRemoveBg(e.target.checked);
+              }}
+              className="mt-1 w-5 h-5 accent-primary rounded shrink-0"
+            />
+            <div>
+              <p className="font-bold text-slate-900 flex items-center gap-2">
+                <span className="material-symbols-outlined text-sm text-primary">auto_fix_high</span>
+                Sử dụng API tách nền (PiAPI)
+              </p>
+              <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                Khi bật, chức năng &quot;Tách nền&quot; sẽ gọi API PiAPI (model RMBG-2.0) cho chất lượng cao hơn.
+                Khi tắt, sẽ dùng bộ xử lý nội bộ trên trình duyệt (miễn phí, nhanh hơn nhưng tách kém hơn với ảnh phức tạp).
+                Cần có PiAPI Key để sử dụng.
+              </p>
+            </div>
+          </label>
         </div>
 
         {PROVIDERS.map((provider) => {

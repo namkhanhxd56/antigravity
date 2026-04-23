@@ -67,6 +67,7 @@ export default function ContentCuratorPage() {
   const [competitorContent, setCompetitorContent] = useState<ContentListing | null>(null);
   const [isGeneratingCompetitor, setIsGeneratingCompetitor] = useState(false);
   const [hasCompetitorContent, setHasCompetitorContent] = useState(false);
+  const [competitorAppendTrigger, setCompetitorAppendTrigger] = useState<{ kw: string; id: number } | null>(null);
 
   // ─── Keyword analytics ──────────────────────────────────────────────────────
   /** Keywords remaining after pipeline (for generic keywords suggestion) */
@@ -463,6 +464,9 @@ export default function ContentCuratorPage() {
               setCompetitorContent({ title: "", bullets: ["", "", "", "", ""], description: "", searchTerms: "" });
               setHasCompetitorContent(false);
             }}
+            keywords={keywords}
+            usedKeywordCounts={usedKeywordCounts}
+            onAddToGenericKeywords={(kw) => setCompetitorAppendTrigger({ kw, id: Date.now() })}
           />
         ) : (
         <KeywordAssigner
@@ -533,6 +537,7 @@ export default function ContentCuratorPage() {
             skillName={selectedSkill}
             remainingKeywords={[]}
             usedKeywordCounts={usedKeywordCounts}
+            searchTermAppendTrigger={mode === "competitor" ? competitorAppendTrigger : null}
             onContentChange={(live) => {
               if (mode !== "competitor") return;
               setHasCompetitorContent(

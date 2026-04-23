@@ -75,9 +75,9 @@ ${kwSection}
 REQUIREMENTS:
 - Title: max ${limits.title} characters
 - Write exactly ${bulletCount} bullet points, each max ${limits.bulletItem} characters
-- Description: paragraph format, max ${limits.description} characters
+- Description: paragraph format, max ${limits.description} characters — weave keywords in naturally as part of the prose, do NOT wrap any keyword in quotes, brackets, or special characters
 - Do NOT use emoji or special characters (®©™) — Amazon policy
-- Integrate provided keywords naturally, each used only once across the full listing
+- Integrate provided keywords naturally into sentences, each used only once across the full listing
 - If image analysis is provided, use it to describe the actual product accurately
 
 OUTPUT: Valid JSON only, no markdown, no explanation:

@@ -8,6 +8,7 @@ import {
   removeStickerKey,
   type StickerKeyType,
 } from "../lib/sticker-keys";
+import { getUsePiapiRemoveBg, setUsePiapiRemoveBg } from "../lib/client-storage";
 
 interface ProviderConfig {
   type: StickerKeyType;
@@ -71,6 +72,7 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const [usePiapiRmbg, setUsePiapiRmbg] = useState(false);
 
   // Load key status from localStorage whenever panel opens
   useEffect(() => {
@@ -82,6 +84,7 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
         gemini: getStickerKey("gemini"),
         piapi: getStickerKey("piapi"),
       });
+      setUsePiapiRmbg(getUsePiapiRemoveBg());
     }
   }, [isOpen]);
 
@@ -183,6 +186,31 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                 </button>
               )}
             </div>
+          </section>
+
+          {/* Background Removal Setting */}
+          <section className="space-y-4">
+            <h3 className="text-[11px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-2">
+              <span className="material-symbols-outlined text-[16px]">auto_fix_high</span>
+              Tách nền
+            </h3>
+            <label className="flex items-start gap-3 p-4 bg-zinc-100 dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 cursor-pointer transition-colors hover:border-primary/40">
+              <input
+                type="checkbox"
+                checked={usePiapiRmbg}
+                onChange={(e) => {
+                  setUsePiapiRmbg(e.target.checked);
+                  setUsePiapiRemoveBg(e.target.checked);
+                }}
+                className="mt-0.5 w-4 h-4 accent-primary rounded shrink-0"
+              />
+              <div>
+                <p className="text-xs font-bold text-zinc-900 dark:text-white">Sử dụng API tách nền (PiAPI)</p>
+                <p className="text-[10px] text-zinc-500 mt-0.5 leading-relaxed">
+                  Bật để dùng AI RMBG-2.0 (tốn credit). Tắt để dùng bộ xử lý nội bộ (miễn phí).
+                </p>
+              </div>
+            </label>
           </section>
 
           {/* Credentials */}
