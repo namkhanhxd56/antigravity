@@ -13,8 +13,9 @@ export async function POST(request: Request) {
 
     const payload = {
       model: "Qubico/image-toolkit",
-      task_type: "remove-background",
+      task_type: "background-remove",
       input: {
+        rmbg_model: "RMBG-2.0",
         image: image,
       }
     };
