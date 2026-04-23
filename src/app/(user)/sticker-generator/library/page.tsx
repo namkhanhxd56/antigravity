@@ -12,6 +12,7 @@ import {
   processBatch,
   type BatchProgress,
 } from "../lib/batch-processor";
+import SettingsPanel from "../components/SettingsPanel";
 
 // ─── Step Labels ─────────────────────────────────────────────────────────────
 
@@ -40,6 +41,7 @@ export default function LibraryPage() {
     success: number;
     failed: number;
   } | null>(null);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   // ── Pick directory ────────────────────────────────────────────────────
 
@@ -203,6 +205,17 @@ export default function LibraryPage() {
                 </span>
               </button>
             )}
+
+            <button
+              onClick={() => setIsSettingsOpen(true)}
+              disabled={isProcessing}
+              className="p-2.5 hover:bg-slate-100 rounded-lg text-slate-500 transition-colors border border-slate-300 shadow-sm disabled:opacity-50"
+              title="Cài đặt"
+            >
+              <span className="material-symbols-outlined text-sm">
+                settings
+              </span>
+            </button>
           </div>
         </div>
       </header>
@@ -408,6 +421,11 @@ export default function LibraryPage() {
           )}
         </div>
       </main>
+
+      <SettingsPanel
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+      />
     </div>
   );
 }
