@@ -2,12 +2,13 @@
 
 import React, { useState, useCallback, useRef } from "react";
 import type { StickerResult } from "../lib/types";
+import { getStickerKey } from "../lib/sticker-keys";
 
 interface ResultGridProps {
   results: StickerResult[];
   isGenerating: boolean;
   skeletonCount: number;
-  onRefresh: (id: string) => void;
+  onRefresh: (id: string, customPrompt?: string) => void;
   onDownload: (id: string) => void;
   onCopy: (id: string) => void;
   onDelete: (id: string) => void;
@@ -21,8 +22,10 @@ interface ResultGridProps {
  * Flood-fill from edges (pure white).
  * Adjusted: Removed shadow fringe expansion to preserve sticker's inherent background (shadow and border).
  */
+
+
 function exportPrintReadyPNG(imageUrl: string): Promise<string> {
-  const BG_THRESHOLD = 245;
+  const TOLERANCE = 35; // Increased tolerance to catch more anti-aliasing edge fuzz
 
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -38,19 +41,26 @@ function exportPrintReadyPNG(imageUrl: string): Promise<string> {
       const imageData = ctx.getImageData(0, 0, w, h);
       const { data } = imageData;
 
-      const isPureWhite = (x: number, y: number): boolean => {
+      // Sample top-left corner for background color
+      const bgR = data[0];
+      const bgG = data[1];
+      const bgB = data[2];
+
+      const isBgColor = (x: number, y: number): boolean => {
         const i = (y * w + x) * 4;
-        return data[i] >= BG_THRESHOLD && data[i + 1] >= BG_THRESHOLD && data[i + 2] >= BG_THRESHOLD;
+        return Math.abs(data[i] - bgR) <= TOLERANCE &&
+          Math.abs(data[i + 1] - bgG) <= TOLERANCE &&
+          Math.abs(data[i + 2] - bgB) <= TOLERANCE;
       };
 
-      // Flood-fill from edges — pure white only
+      // Flood-fill from edges
       const bgMask = new Uint8Array(w * h);
       const queue: number[] = [];
 
       const pushQueue = (px: number, py: number) => {
         if (px < 0 || px >= w || py < 0 || py >= h) return;
         const idx = py * w + px;
-        if (bgMask[idx] === 0 && isPureWhite(px, py)) {
+        if (bgMask[idx] === 0 && isBgColor(px, py)) {
           bgMask[idx] = 1;
           queue.push(px, py);
         }
@@ -75,41 +85,53 @@ function exportPrintReadyPNG(imageUrl: string): Promise<string> {
         pushQueue(px, py + 1);
       }
 
+      // --- Expand Background (Erode Foreground) by 10 pixels ---
+      const EXPAND_PIXELS = 10;
+      for (let iter = 0; iter < EXPAND_PIXELS; iter++) {
+        const tempMask = new Uint8Array(bgMask);
+        for (let y = 1; y < h - 1; y++) {
+          for (let x = 1; x < w - 1; x++) {
+            const idx = y * w + x;
+            if (bgMask[idx] === 0) {
+              if (
+                bgMask[idx - 1] === 1 ||
+                bgMask[idx + 1] === 1 ||
+                bgMask[idx - w] === 1 ||
+                bgMask[idx + w] === 1
+              ) {
+                tempMask[idx] = 1;
+              }
+            }
+          }
+        }
+        for (let i = 0; i < bgMask.length; i++) {
+          bgMask[i] = tempMask[i];
+        }
+      }
+
       // Basic Anti-Aliasing (Feathering) for the hard edges
-      // Softens the transition between the removed background and the preserved sticker edge.
       const alphas = new Uint8Array(w * h);
       for (let i = 0; i < alphas.length; i++) {
         alphas[i] = bgMask[i] ? 0 : 255;
       }
-      
+
       for (let y = 1; y < h - 1; y++) {
         for (let x = 1; x < w - 1; x++) {
           const idx = y * w + x;
           if (bgMask[idx] === 0) {
-            // Count surrounding background pixels
             let bgCount = 0;
             if (bgMask[idx - 1]) bgCount++;
             if (bgMask[idx + 1]) bgCount++;
             if (bgMask[idx - w]) bgCount++;
             if (bgMask[idx + w]) bgCount++;
-            
+
             if (bgCount > 0) {
-              // Edge pixel: soften it based on how white it is
-              const r = data[idx * 4], g = data[idx * 4 + 1], b = data[idx * 4 + 2];
-              const lum = (r + g + b) / 3;
-              // If it's closer to pure white, it's more transparent
-              // lum at 245 => alpha ~0; lum at 200 => alpha 255
-              let alphaFactor = (245 - lum) / 45;
-              if (alphaFactor < 0) alphaFactor = 0;
-              if (alphaFactor > 1) alphaFactor = 1;
-              
-              alphas[idx] = Math.max(0, Math.min(255, Math.floor(alphaFactor * 255)));
+              alphas[idx] = 150; // Simple soften edge
             }
           }
         }
       }
 
-      // Apply alphas
       for (let i = 0; i < alphas.length; i++) {
         data[i * 4 + 3] = alphas[i];
       }
@@ -211,23 +233,87 @@ function SkeletonCard() {
 function LightboxModal({
   result,
   onClose,
-  onDownloadJpg,
-  onRemoveBg,
-  isRemovingBg,
 }: {
   result: StickerResult;
   onClose: () => void;
-  onDownloadJpg: () => void;
-  onRemoveBg: () => void;
-  isRemovingBg: boolean;
 }) {
+  const [displayUrl, setDisplayUrl] = useState(result.imageUrl);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const handleSharpen = async () => {
+    setIsProcessing(true);
+    try {
+      // 1. Gửi lệnh tạo Task Upscale lên PiAPI
+      const piapiKey = getStickerKey("piapi") || "";
+      const res = await fetch('/api/piapi/upscale', {
+        method: 'POST',
+        headers: { 
+           'Content-Type': 'application/json',
+           'x-piapi-key': piapiKey 
+        },
+        body: JSON.stringify({ image: displayUrl, scale: 2 })
+      });
+      const data = await res.json();
+      if (!data.taskId) throw new Error(data.error || "Missing taskId");
+
+      // 2. Vòng lặp Polling liên tục kiểm tra tiến độ PiAPI
+      let status = "pending";
+      let finalImageUrl = "";
+      while (status === "pending" || status === "processing" || status === "starting") {
+        await new Promise(r => setTimeout(r, 4000)); // Nghỉ 4 giây mỗi nhịp
+        const statusRes = await fetch(`/api/piapi/status/${data.taskId}`, {
+           headers: { 'x-piapi-key': piapiKey }
+        });
+        const statusData = await statusRes.json();
+        
+        if (statusData.code !== 200) throw new Error("Status check failed");
+        
+        status = statusData.data.status;
+        if (status === "completed") {
+           // Lấy output url
+           finalImageUrl = statusData.data.output?.image_url || statusData.data.output?.image; 
+        } else if (status === "failed") {
+           throw new Error("Upscale failed on PiAPI server.");
+        }
+      }
+
+      if (finalImageUrl) {
+         // Convert URL to data URL to avoid CORS when downloading later
+         const imgRes = await fetch(finalImageUrl);
+         const blob = await imgRes.blob();
+         const reader = new FileReader();
+         reader.onloadend = () => setDisplayUrl(reader.result as string);
+         reader.readAsDataURL(blob);
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Lỗi khi tải Model AI làm nét ảnh qua PiAPI: " + (err as Error).message);
+    } finally { 
+      setIsProcessing(false); 
+    }
+  }
+
+  const handleRemoveBg = async () => {
+    setIsProcessing(true);
+    try {
+      const removedBgUrl = await exportPrintReadyPNG(displayUrl);
+      setDisplayUrl(removedBgUrl);
+    } catch (err) {
+      alert("Lỗi khi tách nền.");
+    } finally { setIsProcessing(false); }
+  }
+
+  const handleDownload = () => {
+    downloadDataUrl(displayUrl, `processed-${result.id.slice(0, 8)}.png`);
+  }
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
       onClick={onClose}
     >
       <div
-        className="relative max-w-[85vh] max-h-[85vh] bg-white rounded-2xl shadow-2xl overflow-hidden"
+        className="relative max-w-[85vh] max-h-[85vh] bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close button */}
@@ -238,33 +324,49 @@ function LightboxModal({
           <span className="material-symbols-outlined text-sm">close</span>
         </button>
 
-        {/* Image */}
-        <img
-          src={result.imageUrl}
-          alt="Generated sticker"
-          className="w-full h-auto max-h-[70vh] object-contain p-4"
-        />
+        {/* Image Display */}
+        <div className="flex-1 bg-slate-100/50 flex items-center justify-center p-8 overflow-hidden min-h-[400px]">
+          {isProcessing ? (
+            <div className="flex flex-col items-center gap-3">
+              <span className="material-symbols-outlined text-4xl text-slate-400 animate-spin">progress_activity</span>
+              <span className="text-sm font-bold text-slate-500">Đang xử lý hình ảnh...</span>
+            </div>
+          ) : (
+            <img
+              src={displayUrl}
+              alt="Generated sticker"
+              className="w-full h-auto max-h-[60vh] object-contain shadow-sm border border-slate-200 bg-white"
+            />
+          )}
+        </div>
 
         {/* Action bar */}
         <div className="flex items-center justify-center gap-3 px-6 py-4 bg-slate-50 border-t border-slate-200">
           <button
-            onClick={onDownloadJpg}
+            onClick={handleSharpen}
+            disabled={isProcessing}
+            className="flex items-center gap-2 bg-white hover:bg-slate-100 text-slate-700 px-5 py-2.5 rounded-lg text-sm font-bold transition-colors border border-slate-300 shadow-sm disabled:opacity-50"
+          >
+            <span className="material-symbols-outlined text-sm">filter_center_focus</span>
+            Làm nét ảnh
+          </button>
+
+          <button
+            onClick={handleRemoveBg}
+            disabled={isProcessing}
+            className="flex items-center gap-2 bg-white hover:bg-slate-100 text-emerald-700 px-5 py-2.5 rounded-lg text-sm font-bold transition-colors border border-emerald-300 shadow-sm disabled:opacity-50"
+          >
+            <span className="material-symbols-outlined text-sm">auto_fix_high</span>
+            Tách nền
+          </button>
+
+          <button
+            onClick={handleDownload}
+            disabled={isProcessing}
             className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white px-5 py-2.5 rounded-lg text-sm font-bold transition-colors shadow-sm"
           >
             <span className="material-symbols-outlined text-sm">download</span>
-            Download JPG
-          </button>
-          <button
-            onClick={onRemoveBg}
-            disabled={isRemovingBg}
-            className="flex items-center gap-2 bg-white hover:bg-slate-100 text-slate-700 px-5 py-2.5 rounded-lg text-sm font-bold transition-colors border border-slate-300 shadow-sm disabled:opacity-50"
-          >
-            <span
-              className={`material-symbols-outlined text-sm ${isRemovingBg ? "animate-spin" : ""}`}
-            >
-              {isRemovingBg ? "progress_activity" : "auto_fix_high"}
-            </span>
-            {isRemovingBg ? "Processing..." : "Export PNG 1000×1000"}
+            Tải ảnh (PNG)
           </button>
         </div>
       </div>
@@ -288,6 +390,8 @@ export default function ResultGrid({
     null
   );
   const [removingBgId, setRemovingBgId] = useState<string | null>(null);
+  const [refiningId, setRefiningId] = useState<string | null>(null);
+  const [refinePrompt, setRefinePrompt] = useState<string>("");
 
   const showSkeletons = isGenerating && results.length === 0;
   const showEmpty = !isGenerating && results.length === 0;
@@ -372,7 +476,7 @@ export default function ResultGrid({
               {results.map((result) => {
                 const isProcessing = removingBgId === result.id;
                 return (
-                  <div key={result.id} className="space-y-2 group">
+                  <div key={result.id} className="space-y-2 group relative">
                     {/* Clickable image — opens lightbox */}
                     <div
                       className="aspect-square rounded-xl bg-white border border-slate-200 overflow-hidden shadow-sm cursor-pointer hover:shadow-md hover:border-primary/40 transition-all relative"
@@ -391,32 +495,65 @@ export default function ResultGrid({
                       </div>
                     </div>
 
-                    {/* Action buttons */}
-                    <div className="flex items-center justify-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <ActionButton
-                        icon="download"
-                        label="Download JPG"
-                        onClick={() => handleDownloadJpg(result)}
-                      />
-                      <ActionButton
-                        icon="auto_fix_high"
-                        label="Export PNG 1000×1000"
-                        onClick={() => handleRemoveBg(result)}
-                        loading={isProcessing}
-                        hoverColor="hover:text-emerald-600 hover:border-emerald-400"
-                      />
-                      <ActionButton
-                        icon="refresh"
-                        label="Regenerate"
-                        onClick={() => onRefresh(result.id)}
-                      />
-                      <ActionButton
-                        icon="delete"
-                        label="Delete"
-                        onClick={() => onDelete(result.id)}
-                        hoverColor="hover:text-red-500 hover:border-red-300"
-                      />
-                    </div>
+                    {/* Action buttons or Refine Input */}
+                    {refiningId === result.id ? (
+                      <div className="absolute inset-x-0 bottom-0 p-3 bg-white/95 backdrop-blur shadow-[0_-10px_20px_-5px_rgba(0,0,0,0.15)] border border-slate-200 rounded-xl z-10 flex flex-col gap-2">
+                        <textarea
+                          autoFocus
+                          value={refinePrompt}
+                          onChange={(e) => setRefinePrompt(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && !e.shiftKey && refinePrompt.trim()) {
+                              e.preventDefault();
+                              onRefresh(result.id, refinePrompt.trim());
+                              setRefiningId(null);
+                              setRefinePrompt("");
+                            } else if (e.key === "Escape") {
+                              setRefiningId(null);
+                            }
+                          }}
+                          rows={2}
+                          placeholder="Describe edits..."
+                          className="w-full text-xs p-2 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none font-medium text-slate-800"
+                        />
+                        <div className="flex gap-2">
+                          <button onClick={(e) => { e.stopPropagation(); setRefiningId(null); }} className="flex-1 text-[11px] font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 py-1.5 rounded-lg transition-colors">Cancel</button>
+                          <button onClick={(e) => {
+                            e.stopPropagation();
+                            if (refinePrompt.trim()) {
+                              onRefresh(result.id, refinePrompt.trim());
+                              setRefiningId(null);
+                              setRefinePrompt("");
+                            }
+                          }} className="flex-1 text-[11px] font-bold text-white bg-primary hover:bg-primary/90 py-1.5 rounded-lg transition-colors flex items-center justify-center gap-1">
+                            <span className="material-symbols-outlined text-[14px]">auto_awesome</span>
+                            Apply
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <ActionButton
+                          icon="download"
+                          label="Download Raw PNG"
+                          onClick={() => downloadDataUrl(result.imageUrl, `sticker-${result.id.slice(0, 8)}-raw.png`)}
+                        />
+                        <ActionButton
+                          icon="refresh"
+                          label="Regenerate / Refine"
+                          onClick={() => {
+                            setRefiningId(result.id);
+                            setRefinePrompt("");
+                          }}
+                        />
+                        <ActionButton
+                          icon="delete"
+                          label="Delete"
+                          onClick={() => onDelete(result.id)}
+                          hoverColor="hover:text-red-500 hover:border-red-300"
+                        />
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -430,9 +567,6 @@ export default function ResultGrid({
         <LightboxModal
           result={lightboxResult}
           onClose={() => setLightboxResult(null)}
-          onDownloadJpg={() => handleDownloadJpg(lightboxResult)}
-          onRemoveBg={() => handleRemoveBg(lightboxResult)}
-          isRemovingBg={removingBgId === lightboxResult.id}
         />
       )}
     </>

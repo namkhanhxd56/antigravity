@@ -41,6 +41,13 @@ const MODEL_REGISTRY: Omit<ModelConfig, "available">[] = [
     envKey: "GEMINI_API_KEY",
     strengths: ["quality", "latest"],
   },
+  {
+    id: "piapi-flux",
+    name: "PiAPI Flux (FLUX.1-schnell)",
+    description: "Highest quality open-source text-to-image API",
+    envKey: "PIAPI_API_KEY", // this is mostly a placeholder for UI rendering
+    strengths: ["typography", "precision"],
+  },
 ];
 
 // ─── Public API ──────────────────────────────────────────────────────────────

@@ -8,6 +8,7 @@ import StickerNav from "./components/StickerNav";
 import { STICKER_MASTER_RULES } from "./lib/rules";
 import { fileToBase64 } from "@/lib/utils";
 import { getStickerAnalysisModel } from "./lib/client-storage";
+import { getStickerKey } from "./lib/sticker-keys";
 import { getActiveStickerKey } from "./lib/sticker-keys";
 import type {
   StickerFormState,
@@ -29,6 +30,7 @@ const DEFAULT_FORM_STATE: StickerFormState = {
   layoutStructure: "",
   selectedModel: "auto",
   variations: 2,
+  canvasColor: "#00FF00",
 };
 
 /**
@@ -57,6 +59,9 @@ function buildGenerationPrompt(state: StickerFormState): string {
   }
   if (state.layoutStructure) {
     sections.push(`[LAYOUT STRUCTURE] ${state.layoutStructure}`);
+  }
+  if (state.canvasColor && state.canvasColor !== "transparent") {
+    sections.push(`[CANVAS BACKGROUND COLOR] Vui lòng đổ màu nền artboard là màu ${state.canvasColor}. LƯU Ý VIỀN STICKER VẪN PHẢI LÀ MÀU TRẮNG #fefefe BẰNG MỌI GIÁ.`);
   }
 
   return sections.join("\n");
@@ -220,48 +225,109 @@ export default function StickerGeneratorPage() {
     const prompt = buildGenerationPrompt(formState);
 
     try {
-      const active = getActiveStickerKey();
-      const response = await fetch("/sticker-generator/api/generate", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-sticker-key": active?.key ?? "",
-          "x-sticker-key-type": active?.type ?? "",
-        },
-        body: JSON.stringify({
-          prompt,
-          variations: formState.variations,
-          selectedModel: formState.selectedModel,
-          quote: formState.quote,
-        }),
-      });
-
-      const data = await response.json();
-
-      // Track which model was auto-selected
-      if (data.suggestedModel) {
-        setSuggestedModel(data.suggestedModel);
-      }
-
-      if (data.success && data.images && data.images.length > 0) {
-        const newResults: StickerResult[] = data.images.map(
-          (imageUrl: string) => ({
-            id: crypto.randomUUID(),
-            imageUrl,
-            prompt,
-            modelId: data.modelId,
+      if (formState.selectedModel === "piapi-flux") {
+        // Create PiAPI tasks concurrently for each variation
+        const variations = Math.max(1, formState.variations);
+        const piapiKey = getStickerKey("piapi") || "";
+        const createTaskPromises = Array(variations).fill(0).map(() => 
+          fetch("/api/piapi/flux", {
+            method: "POST",
+            headers: { 
+               "Content-Type": "application/json",
+               "x-piapi-key": piapiKey
+            },
+            body: JSON.stringify({ prompt, width: 1024, height: 1024 })
           })
         );
-        setResults(newResults);
+  
+        const taskResponses = await Promise.all(createTaskPromises);
+        const taskDatas = await Promise.all(taskResponses.map(r => r.json()));
+        const taskIds = taskDatas.map(data => data.taskId).filter(Boolean);
+  
+        if (taskIds.length === 0) {
+           throw new Error("Failed to receive any task IDs from PiAPI.");
+        }
+  
+        setSuggestedModel("piapi-flux");
+        
+        const generatedResults: StickerResult[] = [];
+  
+        // Poll statuses concurrently
+        await Promise.all(taskIds.map(async (taskId) => {
+          let status = "pending";
+          while (status === "pending" || status === "processing" || status === "starting") {
+            await new Promise(r => setTimeout(r, 4000));
+            const sRes = await fetch(`/api/piapi/status/${taskId}`, {
+               headers: { "x-piapi-key": piapiKey }
+            });
+            const sData = await sRes.json();
+            if (sData.code !== 200) throw new Error("Status check failed");
+            
+            status = sData.data.status;
+            if (status === "completed") {
+              const imageUrl = sData.data.output?.image_url || sData.data.output?.image;
+              if (imageUrl) {
+                generatedResults.push({
+                  id: crypto.randomUUID(),
+                  imageUrl,
+                  prompt,
+                  modelId: "piapi/flux1-schnell",
+                });
+              }
+            } else if (status === "failed") {
+              throw new Error("Generation task failed on server.");
+            }
+          }
+        }));
+  
+        if (generatedResults.length > 0) {
+          setResults(generatedResults);
+        } else {
+          throw new Error("No images were successfully generated.");
+        }
       } else {
-        console.error("Generation failed:", data.error);
-        alert(`Generation failed: ${data.error}`);
+        // DEFAULT Logic: Generate using Gemini/Vertex via the API Gateway
+        const active = getActiveStickerKey();
+        const response = await fetch("/sticker-generator/api/generate", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-sticker-key": active?.key ?? "",
+            "x-sticker-key-type": active?.type ?? "",
+          },
+          body: JSON.stringify({
+            prompt,
+            variations: formState.variations,
+            selectedModel: formState.selectedModel,
+            quote: formState.quote,
+          }),
+        });
+
+        const data = await response.json();
+
+        // Track which model was auto-selected
+        if (data.suggestedModel) {
+          setSuggestedModel(data.suggestedModel);
+        }
+
+        if (data.success && data.images && data.images.length > 0) {
+          const newResults: StickerResult[] = data.images.map(
+            (imageUrl: string) => ({
+              id: crypto.randomUUID(),
+              imageUrl,
+              prompt,
+              modelId: data.modelId,
+            })
+          );
+          setResults(newResults);
+        } else {
+          console.error("Generation failed:", data.error);
+          alert(`Generation failed: ${data.error}`);
+        }
       }
     } catch (error) {
-      console.error("Generation request error:", error);
-      alert(
-        "Failed to connect to generation service. Check your API key and try again."
-      );
+      console.error("Generation Error:", error);
+      alert("Lỗi khi kết nối hoặc tạo ảnh. Kiểm tra lại API Key hoặc Logs Console.");
     } finally {
       setIsGenerating(false);
     }
@@ -270,10 +336,59 @@ export default function StickerGeneratorPage() {
   // --- Result Actions ---
 
   const handleRefresh = useCallback(
-    (id: string) => {
-      console.log("Refresh sticker:", id);
+    async (id: string, modificationPrompt?: string) => {
+      const resultToRefine = results.find((r) => r.id === id);
+      if (!resultToRefine) return;
+
+      setIsGenerating(true);
+      // If user provided a modification prompt, create a specialized instructions string.
+      // Otherwise, just use the current formState.
+      let promptConfig = buildGenerationPrompt(formState);
+      if (modificationPrompt) {
+        promptConfig = `[INSTRUCTION] Please modify the provided reference image based on this request: "${modificationPrompt}"\n\n[ORIGINAL DESIGN CONTEXT]:\n${promptConfig}`;
+      }
+
+      try {
+        const active = getActiveStickerKey();
+        const response = await fetch("/sticker-generator/api/generate", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-sticker-key": active?.key ?? "",
+            "x-sticker-key-type": active?.type ?? "",
+          },
+          body: JSON.stringify({
+            prompt: promptConfig,
+            variations: 1, // Only generate 1 variation when refining
+            selectedModel: formState.selectedModel,
+            quote: formState.quote,
+            referenceImage: resultToRefine.imageUrl, // Pass generated result as inlineData
+          }),
+        });
+
+        const data = await response.json();
+
+        if (data.success && data.images && data.images.length > 0) {
+          const newResult: StickerResult = {
+            id: crypto.randomUUID(),
+            imageUrl: data.images[0],
+            prompt: promptConfig,
+            modelId: data.modelId,
+          };
+          // Prepend to results
+          setResults((prev) => [newResult, ...prev]);
+        } else {
+          console.error("Refine generation failed:", data.error);
+          alert(`Refine generation failed: ${data.error}`);
+        }
+      } catch (error) {
+        console.error("Refine generation request error:", error);
+        alert("Failed to connect to generation service. Check your API key and try again.");
+      } finally {
+        setIsGenerating(false);
+      }
     },
-    []
+    [formState, results]
   );
 
   const handleDownload = useCallback(

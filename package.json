@@ -12,6 +12,8 @@
     "@google-cloud/vertexai": "^1.10.4",
     "@google/generative-ai": "^0.24.1",
     "@napi-rs/canvas": "^0.1.97",
+    "@tensorflow/tfjs": "~4.11.0",
+    "upscaler": "^1.0.0-beta.19",
     "change-case": "^5.4.4",
     "emoji-picker-react": "^4.18.0",
     "googleapis": "^171.4.0",

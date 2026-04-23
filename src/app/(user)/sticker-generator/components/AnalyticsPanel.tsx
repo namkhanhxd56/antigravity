@@ -270,6 +270,37 @@ export default function AnalyticsPanel({
                 </td>
               </tr>
 
+              {/* Canvas Color */}
+              <tr className="hover:bg-slate-50/50 transition-colors border-t border-slate-200">
+                <td className="py-4 px-4 align-top border-r border-slate-100">
+                  <div className="flex items-center gap-2 font-bold text-sm text-slate-700">
+                    <span className="material-symbols-outlined text-[16px] text-slate-400">format_color_fill</span>
+                    Canvas Background
+                  </div>
+                  <p className="text-[10px] text-slate-400 mt-1 leading-tight">Choose background color to separate from #fefefe border.</p>
+                </td>
+                <td className="py-4 px-4 align-top">
+                  <div className="flex flex-wrap gap-3">
+                    {[
+                      { label: "Chroma Green", value: "#00FF00", bg: "bg-[#00FF00]", border: "border-[#00FF00]" },
+                      { label: "Deep Purple", value: "#800080", bg: "bg-[#800080]", border: "border-[#800080]" },
+                      { label: "Royal Blue", value: "#0000FF", bg: "bg-[#0000FF]", border: "border-[#0000FF]" },
+                      { label: "Crimson Red", value: "#FF0000", bg: "bg-[#FF0000]", border: "border-[#FF0000]" },
+                    ].map((color) => {
+                      const isSelected = formState.canvasColor === color.value || (!formState.canvasColor && color.value === "#00FF00");
+                      return (
+                        <button
+                          key={color.value}
+                          onClick={() => onFormChange({ canvasColor: color.value })}
+                          title={color.label}
+                          className={`w-8 h-8 rounded-full border-2 transition-all ${color.bg} ${isSelected ? "ring-2 ring-offset-2 ring-primary scale-110 " + color.border : color.border + " hover:scale-105"}`}
+                        />
+                      );
+                    })}
+                  </div>
+                </td>
+              </tr>
+
             </tbody>
           </table>
         </div>

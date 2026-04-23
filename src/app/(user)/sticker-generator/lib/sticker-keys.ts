@@ -14,12 +14,13 @@
  * Priority: vertex-json > vertex > gemini
  */
 
-export type StickerKeyType = "vertex-json" | "vertex" | "gemini";
+export type StickerKeyType = "vertex-json" | "vertex" | "gemini" | "piapi";
 
 interface StickerKeys {
   "vertex-json"?: string;
   vertex?: string;
   gemini?: string;
+  piapi?: string;
 }
 
 const LS_KEY = "sticker_keys_v2";

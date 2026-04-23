@@ -108,6 +108,9 @@ export interface StickerFormState {
 
   /** Number of sticker variations to generate (1–4) */
   variations: number;
+
+  /** Canvas background color for generation (optional) */
+  canvasColor?: string;
 }
 
 // ─── Generation Types ────────────────────────────────────────────────────────
