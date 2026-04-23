@@ -3,6 +3,7 @@
 import React, { useState, useCallback, useRef } from "react";
 import type { StickerResult } from "../lib/types";
 import { getStickerKey } from "../lib/sticker-keys";
+import { refineAlpha } from "../lib/alpha-postprocess";
 
 interface ResultGridProps {
   results: StickerResult[];
@@ -329,7 +330,12 @@ function LightboxModal({
         const imgRes = await fetch(finalImageUrl);
         const blob = await imgRes.blob();
         const reader = new FileReader();
-        reader.onloadend = () => setDisplayUrl(reader.result as string);
+        reader.onloadend = async () => {
+          const rawDataUrl = reader.result as string;
+          // Post-process: erode 3px + smooth 1px to remove fringe
+          const refined = await refineAlpha(rawDataUrl, 3, 1);
+          setDisplayUrl(refined);
+        };
         reader.readAsDataURL(blob);
       }
     } catch (err) {
@@ -471,7 +477,16 @@ export default function ResultGrid({
       }
 
       if (finalImageUrl) {
-        downloadDataUrl(finalImageUrl, `sticker-${result.id.slice(0, 8)}-nobg.png`);
+        // Fetch and refine alpha to remove fringe
+        const imgRes = await fetch(finalImageUrl);
+        const blob = await imgRes.blob();
+        const rawDataUrl = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(blob);
+        });
+        const refined = await refineAlpha(rawDataUrl, 3, 1);
+        downloadDataUrl(refined, `sticker-${result.id.slice(0, 8)}-nobg.png`);
       }
     } catch (err) {
       console.error("Remove BG failed:", err);
