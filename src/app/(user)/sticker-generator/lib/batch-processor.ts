@@ -193,14 +193,39 @@ async function piapiRemoveBg(imageUrl: string, piapiKey: string): Promise<string
   return pollPiapiTask(data.taskId, piapiKey);
 }
 
-/** Fetch a URL and return a data URL */
-async function urlToDataUrl(url: string): Promise<string> {
+/** Fetch a URL and return a compressed WebP data URL to prevent Payload size errors */
+async function urlToDataUrl(url: string, maxWidth = 2048): Promise<string> {
   const res = await fetch(url);
   const blob = await res.blob();
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onloadend = () => resolve(reader.result as string);
-    reader.readAsDataURL(blob);
+  
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(blob);
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      let { width, height } = img;
+      
+      // Downscale if larger than maxWidth
+      if (width > maxWidth || height > maxWidth) {
+        const ratio = Math.min(maxWidth / width, maxWidth / height);
+        width = Math.round(width * ratio);
+        height = Math.round(height * ratio);
+      }
+      
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return reject(new Error("Canvas not supported"));
+      
+      ctx.drawImage(img, 0, 0, width, height);
+      
+      // Use webp to preserve transparency but aggressively compress 
+      // to avoid hitting Vercel's 4.5MB payload limit and PiAPI limits
+      resolve(canvas.toDataURL("image/webp", 0.85));
+    };
+    img.onerror = () => reject(new Error("Failed to load image for compression"));
+    img.src = objectUrl;
   });
 }
 
