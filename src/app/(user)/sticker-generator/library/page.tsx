@@ -103,7 +103,7 @@ export default function LibraryPage() {
 
   // ── Batch Process ─────────────────────────────────────────────────────
 
-  const handleProcess = useCallback(async () => {
+  const handleProcess = useCallback(async (mode: "full" | "refine" = "full") => {
     if (!dirHandle || selectedIds.size === 0) return;
 
     const selected = images.filter((img) => selectedIds.has(img.name));
@@ -113,7 +113,8 @@ export default function LibraryPage() {
 
     try {
       const res = await processBatch(selected, dirHandle, (p) =>
-        setProgress({ ...p })
+        setProgress({ ...p }),
+        { mode }
       );
       setResult(res);
     } catch (err) {
@@ -247,16 +248,31 @@ export default function LibraryPage() {
               )}
             </div>
 
-            <button
-              onClick={handleProcess}
-              disabled={isProcessing || selectedIds.size === 0}
-              className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white px-5 py-2.5 rounded-lg text-sm font-bold transition-colors shadow-sm disabled:opacity-50"
-            >
-              <span className="material-symbols-outlined text-sm">
-                auto_fix_high
-              </span>
-              Xử lý {selectedIds.size > 0 ? `(${selectedIds.size})` : ""}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handleProcess("refine")}
+                disabled={isProcessing || selectedIds.size === 0}
+                className="flex items-center gap-2 bg-slate-700 hover:bg-slate-800 text-white px-4 py-2.5 rounded-lg text-sm font-bold transition-colors shadow-sm disabled:opacity-50"
+                title="Chỉ gọt viền + ép alpha cho ảnh đã tách nền sẵn — không gọi AI"
+              >
+                <span className="material-symbols-outlined text-sm">
+                  content_cut
+                </span>
+                Chỉ làm mượt viền
+              </button>
+
+              <button
+                onClick={() => handleProcess("full")}
+                disabled={isProcessing || selectedIds.size === 0}
+                className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white px-4 py-2.5 rounded-lg text-sm font-bold transition-colors shadow-sm disabled:opacity-50"
+                title="Pipeline đầy đủ: làm nét → tách nền → làm mượt viền"
+              >
+                <span className="material-symbols-outlined text-sm">
+                  auto_fix_high
+                </span>
+                Xử lý đầy đủ {selectedIds.size > 0 ? `(${selectedIds.size})` : ""}
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -367,11 +383,10 @@ export default function LibraryPage() {
                   <div
                     key={img.name}
                     onClick={() => !isProcessing && toggleSelect(img.name)}
-                    className={`relative aspect-square rounded-xl overflow-hidden border-2 cursor-pointer transition-all group ${
-                      isSelected
+                    className={`relative aspect-square rounded-xl overflow-hidden border-2 cursor-pointer transition-all group ${isSelected
                         ? "border-primary shadow-md shadow-primary/20 ring-2 ring-primary/30"
                         : "border-slate-200 hover:border-slate-400"
-                    } ${isProcessing ? "pointer-events-none opacity-70" : ""}`}
+                      } ${isProcessing ? "pointer-events-none opacity-70" : ""}`}
                   >
                     {/* Image */}
                     <img
@@ -383,11 +398,10 @@ export default function LibraryPage() {
 
                     {/* Checkbox overlay */}
                     <div
-                      className={`absolute top-2 left-2 w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all ${
-                        isSelected
+                      className={`absolute top-2 left-2 w-6 h-6 rounded-md border-2 flex items-center justify-center transition-all ${isSelected
                           ? "bg-primary border-primary"
                           : "bg-white/80 border-slate-300 group-hover:border-primary/50"
-                      }`}
+                        }`}
                     >
                       {isSelected && (
                         <span className="material-symbols-outlined text-white text-sm">

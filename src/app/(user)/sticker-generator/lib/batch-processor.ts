@@ -197,29 +197,29 @@ async function piapiRemoveBg(imageUrl: string, piapiKey: string): Promise<string
 async function urlToDataUrl(url: string, maxWidth = 2048): Promise<string> {
   const res = await fetch(url);
   const blob = await res.blob();
-  
+
   return new Promise((resolve, reject) => {
     const img = new Image();
     const objectUrl = URL.createObjectURL(blob);
     img.onload = () => {
       URL.revokeObjectURL(objectUrl);
       let { width, height } = img;
-      
+
       // Downscale if larger than maxWidth
       if (width > maxWidth || height > maxWidth) {
         const ratio = Math.min(maxWidth / width, maxWidth / height);
         width = Math.round(width * ratio);
         height = Math.round(height * ratio);
       }
-      
+
       const canvas = document.createElement("canvas");
       canvas.width = width;
       canvas.height = height;
       const ctx = canvas.getContext("2d");
       if (!ctx) return reject(new Error("Canvas not supported"));
-      
+
       ctx.drawImage(img, 0, 0, width, height);
-      
+
       // Use webp to preserve transparency but aggressively compress 
       // to avoid hitting Vercel's 4.5MB payload limit and PiAPI limits
       resolve(canvas.toDataURL("image/webp", 0.85));
@@ -255,7 +255,8 @@ export type ProgressCallback = (progress: BatchProgress) => void;
 export async function processBatch(
   images: LibraryImage[],
   rootDir: FileSystemDirectoryHandle,
-  onProgress: ProgressCallback
+  onProgress: ProgressCallback,
+  options: { mode: "full" | "refine" } = { mode: "full" }
 ): Promise<{ success: number; failed: number }> {
   const processedDir = await getOrCreateSubdir(rootDir, "processed");
   const piapiKey = getStickerKey("piapi") || "";
@@ -272,8 +273,8 @@ export async function processBatch(
       // PiAPI backend cannot read local blob: URLs, it needs base64.
       let currentUrl = await urlToDataUrl(img.url);
 
-      // ── Step 1: Upscale if needed ───────────────────────────────────
-      if (img.needsUpscale && piapiKey) {
+      // ── Step 1: Upscale if needed (full mode only) ──────────────────
+      if (options.mode === "full" && img.needsUpscale && piapiKey) {
         onProgress({
           current: i + 1,
           total: images.length,
@@ -284,20 +285,23 @@ export async function processBatch(
         currentUrl = await urlToDataUrl(upscaledUrl);
       }
 
-      // ── Step 2: Remove background ───────────────────────────────────
-      onProgress({
-        current: i + 1,
-        total: images.length,
-        currentFile: img.name,
-        step: "remove-bg",
-      });
+      // ── Step 2: Remove background (full mode only) ──────────────────
+      let removedBgDataUrl = currentUrl;
 
-      let removedBgDataUrl: string;
-      if (usePiapiRmbg && piapiKey) {
-        const removedBgUrl = await piapiRemoveBg(currentUrl, piapiKey);
-        removedBgDataUrl = await urlToDataUrl(removedBgUrl);
-      } else {
-        removedBgDataUrl = await exportPrintReadyPNG(currentUrl);
+      if (options.mode === "full") {
+        onProgress({
+          current: i + 1,
+          total: images.length,
+          currentFile: img.name,
+          step: "remove-bg",
+        });
+
+        if (usePiapiRmbg && piapiKey) {
+          const removedBgUrl = await piapiRemoveBg(currentUrl, piapiKey);
+          removedBgDataUrl = await urlToDataUrl(removedBgUrl);
+        } else {
+          removedBgDataUrl = await exportPrintReadyPNG(currentUrl);
+        }
       }
 
       // ── Step 3: Refine Alpha ────────────────────────────────────────
