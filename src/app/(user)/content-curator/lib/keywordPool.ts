@@ -3,6 +3,8 @@
  * Chạy hoàn toàn trên client-side (không cần API).
  */
 
+import { parseKeywords } from "./keywordUtils";
+
 export interface KeywordPool {
   /** Keywords được user assign cho từng section */
   assigned: {
@@ -20,21 +22,6 @@ export interface KeywordPool {
   };
 }
 
-/** Parse raw keyword textarea thành array (bỏ volume suffix) */
-function parseRawKeywords(raw: string): string[] {
-  const lines = raw.split(/[\n,]+/).map((l) => l.trim()).filter(Boolean);
-  const seen = new Set<string>();
-  const result: string[] = [];
-  for (const line of lines) {
-    const kw = line.replace(/\s+(\d+|-)\s*$/, "").trim();
-    if (kw && !seen.has(kw.toLowerCase())) {
-      seen.add(kw.toLowerCase());
-      result.push(kw);
-    }
-  }
-  return result;
-}
-
 /**
  * Khởi tạo KeywordPool từ raw keyword string + user assignments.
  * Keywords đã assigned vào section sẽ không có trong available_pool.
@@ -43,7 +30,7 @@ export function initPool(
   rawKeywords: string,
   assignments: { title: string[]; bullets: string[]; description: string[] }
 ): KeywordPool {
-  const all = parseRawKeywords(rawKeywords);
+  const all = parseKeywords(rawKeywords);
   const assignedSet = new Set([
     ...assignments.title,
     ...assignments.bullets,
@@ -121,13 +108,4 @@ export function consumeStep(
 /** Lấy tất cả keywords chưa dùng (remaining after pipeline) */
 export function getRemainingKeywords(pool: KeywordPool): string[] {
   return [...pool.available_pool];
-}
-
-/** Lấy tất cả keywords đã dùng (across all sections) */
-export function getAllUsed(pool: KeywordPool): string[] {
-  return [
-    ...pool.used.title,
-    ...pool.used.bullets,
-    ...pool.used.description,
-  ];
 }

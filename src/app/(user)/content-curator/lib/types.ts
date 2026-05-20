@@ -88,6 +88,9 @@ export const DEFAULT_SKILL_OPTIONS: SkillOption[] = [
   { value: "Budget_Friendly.md", label: "Budget Friendly" },
 ];
 
+/** Default Gemini model — used when user has not chosen a model in Settings yet */
+export const DEFAULT_GEMINI_MODEL = "gemini-2.5-flash";
+
 /** Occasion options for campaign-specific listing */
 export const OCCASIONS = [
   "Everyday",

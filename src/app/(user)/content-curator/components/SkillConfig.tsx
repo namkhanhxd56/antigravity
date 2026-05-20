@@ -3,7 +3,16 @@
 import { useState, useRef, useEffect } from "react";
 import { DEFAULT_SKILL_OPTIONS, type SkillOption } from "../lib/types";
 import CustomizationContent from "./CustomizationContent";
-import { splitSkill, saveSplitToStorage, clearSplitStorage } from "../lib/skillSplitter";
+import { splitSkill, saveSplitToStorage, clearSplitStorage, type SplitSkill } from "../lib/skillSplitter";
+
+type SectionKey = "image" | "title" | "bullets" | "description";
+
+const SECTION_LABELS: Record<SectionKey, string> = {
+  image: "IMAGE",
+  title: "TITLE",
+  bullets: "BULLETS",
+  description: "DESCRIPTION",
+};
 
 const LOCAL_SKILLS_KEY = "curator_local_skills";
 
@@ -30,17 +39,8 @@ interface SkillConfigProps {
   onOccasionChange: (v: string) => void;
   notes: string;
   onNotesChange: (v: string) => void;
-  onGenerate: () => void;
-  isGenerating: boolean;
-  canGenerate: boolean;
-  /** Slot cho Dev Inspector — undefined khi production (file bị gitignore) */
-  devPanel?: React.ReactNode;
-  /** Called after skill is split — notifies parent of new split state */
-  onSkillSplit?: (skillName: string) => void;
   /** Called whenever full skill content is loaded (raw .md string) — for no-split pipeline */
   onSkillContentLoaded?: (content: string) => void;
-  /** Whether to show the Generate button (default true). Pass false when button lives in another column. */
-  showGenerateButton?: boolean;
 }
 
 export default function SkillConfig({
@@ -52,17 +52,11 @@ export default function SkillConfig({
   onOccasionChange,
   notes,
   onNotesChange,
-  onGenerate,
-  isGenerating,
-  canGenerate,
-  devPanel,
-  onSkillSplit,
   onSkillContentLoaded,
-  showGenerateButton = true,
 }: SkillConfigProps) {
   const [isReloading, setIsReloading] = useState(false);
   const [skillOptions, setSkillOptions] = useState<SkillOption[]>(DEFAULT_SKILL_OPTIONS);
-  const [splitStatus, setSplitStatus] = useState<"none" | "ok" | "missing">("none");
+  const [splitInfo, setSplitInfo] = useState<SplitSkill | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   /** Merge server skills với local skills từ localStorage */
@@ -110,11 +104,11 @@ export default function SkillConfig({
         triggerSplit(skillName, data.content);
       } else {
         clearSplitStorage();
-        setSplitStatus("none");
+        setSplitInfo(null);
       }
     } catch {
       clearSplitStorage();
-      setSplitStatus("none");
+      setSplitInfo(null);
     }
   };
 
@@ -136,12 +130,11 @@ export default function SkillConfig({
     fileInputRef.current?.click();
   };
 
-  /** Tách skill file thành 3 sections và lưu vào localStorage + disk (local only) */
+  /** Tách skill file thành 4 sections (image/title/bullets/description) và lưu vào localStorage + disk (local only) */
   const triggerSplit = (skillName: string, content: string) => {
     const result = splitSkill(content);
     saveSplitToStorage(skillName, result);
-    setSplitStatus(result.isValid ? "ok" : "missing");
-    onSkillSplit?.(skillName);
+    setSplitInfo(result);
     onSkillContentLoaded?.(content);
 
     // Write split sections to disk for local inspection only (no-op on Vercel)
@@ -215,7 +208,7 @@ export default function SkillConfig({
           <button
             onClick={handleReload}
             disabled={isReloading}
-            title="Reload skill from disk (clears cache)"
+            title="Re-split current skill (re-reads source and rebuilds image/title/bullets/description)"
             className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-700 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors disabled:opacity-50"
           >
             <span className={`material-symbols-outlined text-[18px] ${isReloading ? 'animate-spin' : ''}`}>refresh</span>
@@ -237,15 +230,28 @@ export default function SkillConfig({
           Import .md skill file
         </button>
 
-        {/* Split status indicator */}
-        {splitStatus !== "none" && (
-          <div className={`flex items-center gap-1.5 text-[11px] font-medium ${splitStatus === "ok" ? "text-emerald-600 dark:text-emerald-400" : "text-amber-500"}`}>
-            <span className="material-symbols-outlined text-[14px]">
-              {splitStatus === "ok" ? "check_circle" : "warning"}
-            </span>
-            {splitStatus === "ok"
-              ? "Skill split: TITLE / BULLETS / DESCRIPTION ✓"
-              : "Skill missing ## TITLE / ## BULLETS / ## DESCRIPTION sections"}
+        {/* Split status — 4 sections (image / title / bullets / description) */}
+        {splitInfo && (
+          <div className="flex flex-wrap items-center gap-1.5 text-[10px] font-semibold tracking-wider">
+            {(Object.keys(SECTION_LABELS) as SectionKey[]).map((key) => {
+              const present = !!splitInfo[key];
+              return (
+                <span
+                  key={key}
+                  title={present ? `## ${SECTION_LABELS[key]} found` : `Missing ## ${SECTION_LABELS[key]} section`}
+                  className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 border ${
+                    present
+                      ? "border-emerald-200 dark:border-emerald-900/50 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400"
+                      : "border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-500"
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[11px]">
+                    {present ? "check" : "warning"}
+                  </span>
+                  {SECTION_LABELS[key]}
+                </span>
+              );
+            })}
           </div>
         )}
       </div>
@@ -275,32 +281,6 @@ export default function SkillConfig({
           placeholder="Additional context or formatting notes..."
         />
       </div>
-
-      <hr className="mb-6 border-zinc-100 dark:border-zinc-800" />
-
-      {/* Generate Button */}
-      {showGenerateButton && (
-        <button
-          onClick={onGenerate}
-          disabled={isGenerating || !canGenerate}
-          className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#B45309] py-3 text-[15px] font-medium text-white shadow-sm transition-all hover:bg-[#92400e] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
-        >
-          {isGenerating ? (
-            <>
-              <span className="material-symbols-outlined animate-spin text-[18px]">progress_activity</span>
-              Generating…
-            </>
-          ) : (
-            <>
-              <span className="material-symbols-outlined text-[18px]">auto_awesome</span>
-              Generate content
-            </>
-          )}
-        </button>
-      )}
-
-      {/* Dev Inspector slot — chỉ có khi file DevInspector.tsx tồn tại (dev only) */}
-      {devPanel}
 
     </div>
   );

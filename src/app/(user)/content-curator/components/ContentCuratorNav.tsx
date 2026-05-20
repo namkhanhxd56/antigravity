@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useCuratorMode } from "../lib/ModeContext";
 import { getCuratorModel } from "../lib/client-storage";
+import { DEFAULT_GEMINI_MODEL } from "../lib/types";
 import SettingsPanel from "./SettingsPanel";
 
 export const GEMINI_MODELS = [
@@ -17,10 +18,8 @@ export const GEMINI_MODELS = [
 export type GeminiModel = (typeof GEMINI_MODELS)[number]["value"];
 
 export function getStoredModel(): GeminiModel {
-  return (getCuratorModel() as GeminiModel) || "gemini-2.0-flash";
+  return (getCuratorModel() as GeminiModel) || DEFAULT_GEMINI_MODEL;
 }
-
-export const DEFAULT_MODEL = "gemini-2.0-flash";
 
 export default function ContentCuratorNav() {
   const { mode, setMode } = useCuratorMode();

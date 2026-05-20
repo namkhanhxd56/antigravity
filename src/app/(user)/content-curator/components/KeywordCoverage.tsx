@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { parseKeywordsWithVolume } from "../lib/keywordUtils";
 
 interface KeywordCoverageProps {
   /** Raw keyword textarea content */
@@ -10,33 +11,6 @@ interface KeywordCoverageProps {
    * Keys are lowercase. Empty = no content generated yet.
    */
   usedKeywordCounts?: Record<string, number>;
-}
-
-interface ParsedKeyword {
-  kw: string;
-  volume: number | null;
-}
-
-function parseKeywordsWithVolume(raw: string): ParsedKeyword[] {
-  const lines = raw.split(/[\n,]+/).map((l) => l.trim()).filter(Boolean);
-  const seen = new Set<string>();
-  const result: ParsedKeyword[] = [];
-  for (const line of lines) {
-    const volumeMatch = line.match(/\s+([\d,]+|-)\s*$/);
-    const kw = volumeMatch
-      ? line.slice(0, line.length - volumeMatch[0].length).trim()
-      : line.trim();
-    let volume: number | null = null;
-    if (volumeMatch && volumeMatch[1] !== "-") {
-      const n = parseInt(volumeMatch[1].replace(/,/g, ""), 10);
-      if (!isNaN(n)) volume = n;
-    }
-    if (kw && !seen.has(kw.toLowerCase())) {
-      seen.add(kw.toLowerCase());
-      result.push({ kw, volume });
-    }
-  }
-  return result;
 }
 
 export default function KeywordCoverage({ keywords, usedKeywordCounts = {} }: KeywordCoverageProps) {

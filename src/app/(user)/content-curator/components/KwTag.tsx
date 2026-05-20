@@ -1,43 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-
-// ─── Shared helpers ───────────────────────────────────────────────────────────
-
-export interface ParsedKeyword {
-  kw: string;
-  volume: number | null;
-}
-
-/** Parse raw keyword lines, extracting keyword string + optional volume */
-export function parseKeywordsWithVolume(raw: string): ParsedKeyword[] {
-  const lines = raw.split(/[\n,]+/).map((l) => l.trim()).filter(Boolean);
-  const seen = new Set<string>();
-  const result: ParsedKeyword[] = [];
-  for (const line of lines) {
-    const volumeMatch = line.match(/\s+([\d,]+|-)\s*$/);
-    const kw = volumeMatch
-      ? line.slice(0, line.length - volumeMatch[0].length).trim()
-      : line.trim();
-    let volume: number | null = null;
-    if (volumeMatch && volumeMatch[1] !== "-") {
-      const n = parseInt(volumeMatch[1].replace(/,/g, ""), 10);
-      if (!isNaN(n)) volume = n;
-    }
-    if (kw && !seen.has(kw.toLowerCase())) {
-      seen.add(kw.toLowerCase());
-      result.push({ kw, volume });
-    }
-  }
-  return result;
-}
-
-/** Format volume number compactly: 12000 → "12K", 1500000 → "1.5M" */
-export function formatVolume(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${Math.round(n / 1_000)}K`;
-  return String(n);
-}
+import { formatVolume } from "../lib/keywordUtils";
 
 // ─── KwTag component ──────────────────────────────────────────────────────────
 

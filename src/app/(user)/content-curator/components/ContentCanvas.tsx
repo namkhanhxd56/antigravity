@@ -10,11 +10,7 @@ import { useMemo } from "react";
 import { getCuratorHeaders } from "../lib/curator-keys";
 import { getStoredModel } from "./ContentCuratorNav";
 import ColumnCustomizer, { buildDefaultColumns, type Column } from "./ColumnCustomizer";
-
-/** Strip trailing volume number or "-" from a keyword line */
-function stripVolume(line: string): string {
-  return line.replace(/\s+(\d+|-)\s*$/, "").trim();
-}
+import { stripVolume } from "../lib/keywordUtils";
 
 interface ContentCanvasProps {
   content: ContentListing | null;

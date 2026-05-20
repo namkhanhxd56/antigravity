@@ -2,7 +2,8 @@
 
 import { useMemo, useState, useRef, useCallback } from "react";
 import type { PipelineVersion } from "../lib/types";
-import { KwTag, parseKeywordsWithVolume, formatVolume } from "./KwTag";
+import { KwTag } from "./KwTag";
+import { parseKeywordsWithVolume, formatVolume } from "../lib/keywordUtils";
 
 export interface KeywordAssignments {
   title: string[];

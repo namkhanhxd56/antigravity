@@ -11,32 +11,13 @@ import KeywordCoverage from "./components/KeywordCoverage";
 import { getCuratorHeaders } from "./lib/curator-keys";
 import { getStoredModel } from "./components/ContentCuratorNav";
 import { initPool, scanUsed, consumeStep, getRemainingKeywords } from "./lib/keywordPool";
+import { parseKeywords } from "./lib/keywordUtils";
 import { loadSplitFromStorage } from "./lib/skillSplitter";
 import { useContentLimits } from "./lib/useContentLimits";
 import type { ContentListing, ImageAnalysis, PipelineStage, PipelineVersion, KeywordAssignments as KWAssignments } from "./lib/types";
 import { useCuratorMode } from "./lib/ModeContext";
 
-// ─── DEV ONLY ─────────────────────────────────────────────────────────────────
-// import DevInspector from "./components/DevInspector";
-// const DEV_INSPECTOR = true;
-// ─────────────────────────────────────────────────────────────────────────────
-
 const EMPTY_ASSIGNMENTS: KWAssignments = { title: [], bullets: [], description: [] };
-
-/** Parse raw keyword textarea → deduplicated array (strips volume suffix) */
-function parseKeywordsToArray(raw: string): string[] {
-  const lines = raw.split(/[\n,]+/).map((l) => l.trim()).filter(Boolean);
-  const seen = new Set<string>();
-  const result: string[] = [];
-  for (const line of lines) {
-    const kw = line.replace(/\s+(\d+|-)\s*$/, "").trim();
-    if (kw && !seen.has(kw.toLowerCase())) {
-      seen.add(kw.toLowerCase());
-      result.push(kw);
-    }
-  }
-  return result;
-}
 
 export default function ContentCuratorPage() {
   // ─── Input state ────────────────────────────────────────────────────────────
@@ -78,7 +59,7 @@ export default function ContentCuratorPage() {
   const { limits } = useContentLimits();
   const { mode } = useCuratorMode();
 
-  const allKeywords = useMemo(() => parseKeywordsToArray(keywords), [keywords]);
+  const allKeywords = useMemo(() => parseKeywords(keywords), [keywords]);
   const canGenerate = allKeywords.length > 0;
 
   // Sync assignments: remove keywords that no longer exist in the bank
@@ -435,12 +416,7 @@ export default function ContentCuratorPage() {
             onOccasionChange={setOccasion}
             notes={notes}
             onNotesChange={setNotes}
-            onGenerate={() => {}}
-            isGenerating={false}
-            canGenerate={false}
-            onSkillSplit={() => {}}
             onSkillContentLoaded={setSkillContent}
-            showGenerateButton={false}
           />
         )}
 

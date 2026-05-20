@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import HighlightTextarea from "./HighlightTextarea";
+import { stripVolume } from "../lib/keywordUtils";
 
 // ─── Keyword highlight (read-only display) ────────────────────────────────────
 
@@ -73,12 +74,6 @@ interface CompareViewProps {
   myTitle: string;
   onMyTitleChange?: (val: string) => void;
   bankKeywords: string;
-}
-
-// ─── Strip volume suffix from keyword lines ───────────────────────────────────
-
-function stripVolume(line: string): string {
-  return line.replace(/\s+(\d+|-)\s*$/, "").trim();
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────

@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { KwTag, parseKeywordsWithVolume } from "./KwTag";
+import { KwTag } from "./KwTag";
+import { parseKeywordsWithVolume } from "../lib/keywordUtils";
 
 export interface CompetitorInput {
   asin: string;
