@@ -11,13 +11,18 @@ import KeywordCoverage from "./components/KeywordCoverage";
 import { getCuratorHeaders } from "./lib/curator-keys";
 import { getStoredModel } from "./components/ContentCuratorNav";
 import { initPool, scanUsed, consumeStep, getRemainingKeywords } from "./lib/keywordPool";
-import { parseKeywords } from "./lib/keywordUtils";
+import { parseKeywords, parseKeywordsWithVolume, pickTitleSeeds, computeKeywordCounts } from "./lib/keywordUtils";
 import { loadSplitFromStorage } from "./lib/skillSplitter";
 import { useContentLimits } from "./lib/useContentLimits";
 import type { ContentListing, ImageAnalysis, PipelineStage, PipelineVersion, KeywordAssignments as KWAssignments } from "./lib/types";
 import { useCuratorMode } from "./lib/ModeContext";
 
 const EMPTY_ASSIGNMENTS: KWAssignments = { title: [], bullets: [], description: [] };
+
+/** Auto-fill target — top up title pool to at least N keywords before generation */
+const TITLE_POOL_TARGET = 4;
+/** Title validation — minimum keywords from assigned pool that must appear in generated title */
+const TITLE_KW_MIN = 3;
 
 export default function ContentCuratorPage() {
   // ─── Input state ────────────────────────────────────────────────────────────
@@ -94,15 +99,11 @@ export default function ContentCuratorPage() {
   }, []);
 
   // ─── Shared: compute per-keyword counts from full generated text ────────────
-  const computeCounts = useCallback((fullText: string) => {
-    const counts: Record<string, number> = {};
-    for (const kw of allKeywords) {
-      const escaped = kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      const matches = fullText.match(new RegExp(escaped, "gi"));
-      if (matches && matches.length > 0) counts[kw.toLowerCase()] = matches.length;
-    }
-    return counts;
-  }, [allKeywords]);
+  // Uses whole-phrase matching — "sticker" does NOT match inside "stickers".
+  const computeCounts = useCallback(
+    (fullText: string) => computeKeywordCounts(fullText, allKeywords),
+    [allKeywords]
+  );
 
   // ─── V1 Pipeline (Sequential, zone-locked pool) ───────────────────────────────
   // ─── V2 Pipeline (Sequential, cascade push-down) ─────────────────────────────
@@ -148,9 +149,29 @@ export default function ContentCuratorPage() {
         }
       }
 
+      // ── Phase A (shared V1+V2): auto-fill title pool to TITLE_POOL_TARGET ────
+      //   Rank by volume desc, then position asc. Skip keywords already assigned
+      //   to any zone. If user already assigned ≥ target, no-op.
+      const parsedKw = parseKeywordsWithVolume(keywords);
+      const allAssignedLower = new Set([
+        ...assignments.title.map((k) => k.toLowerCase()),
+        ...assignments.bullets.map((k) => k.toLowerCase()),
+        ...assignments.description.map((k) => k.toLowerCase()),
+      ]);
+      const titleSeeds = pickTitleSeeds(
+        parsedKw,
+        Math.max(0, TITLE_POOL_TARGET - assignments.title.length),
+        allAssignedLower
+      );
+      const effectiveAssignments: KWAssignments = {
+        title: [...assignments.title, ...titleSeeds],
+        bullets: [...assignments.bullets],
+        description: [...assignments.description],
+      };
+
       if (pipelineVersion === "v1") {
         // ── V1: Zone-locked sequential pool ─────────────────────────────────
-        let pool = initPool(keywords, assignments);
+        let pool = initPool(keywords, effectiveAssignments);
 
         // Step 1: Title
         setPipelineStage("title");
@@ -166,12 +187,51 @@ export default function ContentCuratorPage() {
         });
         const titleData = await titleRes.json();
         if (!titleData.success) throw new Error(titleData.error ?? "Title generation failed");
-        const titleText: string = titleData.title ?? "";
+        let titleText: string = titleData.title ?? "";
 
-        pool = consumeStep(pool, scanUsed(titleText, [...pool.assigned.title, ...pool.available_pool]), "title");
+        // ── Phase B: validate title contains ≥ TITLE_KW_MIN keywords from assigned ──
+        const assignedTitle = pool.assigned.title;
+        let usedFromAssigned = scanUsed(titleText, assignedTitle);
+        if (usedFromAssigned.length < TITLE_KW_MIN && assignedTitle.length >= TITLE_KW_MIN) {
+          const usedLower = new Set(usedFromAssigned.map((k) => k.toLowerCase()));
+          const missing = assignedTitle.filter((k) => !usedLower.has(k.toLowerCase()));
+          const mustInclude = missing.slice(0, TITLE_KW_MIN - usedFromAssigned.length);
+          console.warn(
+            `[pipeline V1] title used ${usedFromAssigned.length}/${TITLE_KW_MIN} required keywords — retrying with mustInclude:`,
+            mustInclude
+          );
+          try {
+            const retryRes = await fetch("/content-curator/api/generate-title", {
+              method: "POST",
+              headers: authHeaders,
+              body: JSON.stringify({
+                ...baseBody, skillContent,
+                assignedKeywords: assignedTitle,
+                availablePool: pool.available_pool,
+                imageAnalysis,
+                mustIncludeKeywords: mustInclude,
+                previousAttempt: titleText,
+              }),
+            });
+            const retryData = await retryRes.json();
+            if (retryData.success && retryData.title) {
+              titleText = retryData.title;
+              usedFromAssigned = scanUsed(titleText, assignedTitle);
+            }
+          } catch {
+            console.warn("[pipeline V1] title retry failed — keeping original title");
+          }
+        }
+
+        // Track keywords pushed down from title (assigned but not used) — bullet #1 priority
+        const usedInTitleAll = scanUsed(titleText, [...assignedTitle, ...pool.available_pool]);
+        const usedTitleLower = new Set(usedInTitleAll.map((k) => k.toLowerCase()));
+        const pushedFromTitle = assignedTitle.filter((k) => !usedTitleLower.has(k.toLowerCase()));
+
+        pool = consumeStep(pool, usedInTitleAll, "title");
         setContent({ title: titleText, bullets: [], description: "", searchTerms: "" });
 
-        // Step 2: Bullets
+        // Step 2: Bullets (with priorityKeywords pushed from title)
         setPipelineStage("bullets");
         const bulletsRes = await fetch("/content-curator/api/generate-bullets", {
           method: "POST",
@@ -181,6 +241,7 @@ export default function ContentCuratorPage() {
             assignedKeywords: pool.assigned.bullets,
             availablePool: pool.available_pool,
             bulletCount, imageAnalysis,
+            priorityKeywords: pushedFromTitle,
           }),
         });
         const bulletsData = await bulletsRes.json();
@@ -221,16 +282,17 @@ export default function ContentCuratorPage() {
         const isUsedKw = (kw: string, used: string[]) =>
           used.some((u) => u.toLowerCase() === kw.toLowerCase());
 
-        const allAssigned = new Set([
-          ...assignments.title.map((k) => k.toLowerCase()),
-          ...assignments.bullets.map((k) => k.toLowerCase()),
-          ...assignments.description.map((k) => k.toLowerCase()),
+        // Use effectiveAssignments (Phase A auto-fill applied) instead of raw assignments
+        const v2AllAssigned = new Set([
+          ...effectiveAssignments.title.map((k) => k.toLowerCase()),
+          ...effectiveAssignments.bullets.map((k) => k.toLowerCase()),
+          ...effectiveAssignments.description.map((k) => k.toLowerCase()),
         ]);
-        let v2Pool = allKeywords.filter((k) => !allAssigned.has(k.toLowerCase()));
+        let v2Pool = allKeywords.filter((k) => !v2AllAssigned.has(k.toLowerCase()));
         const v2Assigned = {
-          title: [...assignments.title],
-          bullets: [...assignments.bullets],
-          description: [...assignments.description],
+          title: [...effectiveAssignments.title],
+          bullets: [...effectiveAssignments.bullets],
+          description: [...effectiveAssignments.description],
         };
 
         // Step 1: Title
@@ -247,9 +309,43 @@ export default function ContentCuratorPage() {
         });
         const titleData = await titleRes.json();
         if (!titleData.success) throw new Error(titleData.error ?? "Title generation failed");
-        const titleText: string = titleData.title ?? "";
+        let titleText: string = titleData.title ?? "";
 
-        // Push-down: unused title-assigned → bullets assigned (must-use)
+        // ── Phase B: validate title contains ≥ TITLE_KW_MIN keywords from assigned ──
+        const assignedTitleV2 = v2Assigned.title;
+        let usedFromAssignedV2 = scanUsed(titleText, assignedTitleV2);
+        if (usedFromAssignedV2.length < TITLE_KW_MIN && assignedTitleV2.length >= TITLE_KW_MIN) {
+          const usedLowerV2 = new Set(usedFromAssignedV2.map((k) => k.toLowerCase()));
+          const missing = assignedTitleV2.filter((k) => !usedLowerV2.has(k.toLowerCase()));
+          const mustInclude = missing.slice(0, TITLE_KW_MIN - usedFromAssignedV2.length);
+          console.warn(
+            `[pipeline V2] title used ${usedFromAssignedV2.length}/${TITLE_KW_MIN} required keywords — retrying with mustInclude:`,
+            mustInclude
+          );
+          try {
+            const retryRes = await fetch("/content-curator/api/generate-title", {
+              method: "POST",
+              headers: authHeaders,
+              body: JSON.stringify({
+                ...baseBody, skillContent: v2TitleSkill,
+                assignedKeywords: assignedTitleV2,
+                availablePool: v2Pool,
+                imageAnalysis,
+                mustIncludeKeywords: mustInclude,
+                previousAttempt: titleText,
+              }),
+            });
+            const retryData = await retryRes.json();
+            if (retryData.success && retryData.title) {
+              titleText = retryData.title;
+              usedFromAssignedV2 = scanUsed(titleText, assignedTitleV2);
+            }
+          } catch {
+            console.warn("[pipeline V2] title retry failed — keeping original title");
+          }
+        }
+
+        // Push-down: unused title-assigned → bullets assigned + bullet #1 priority
         const usedInTitle = scanUsed(titleText, [...v2Assigned.title, ...v2Pool]);
         const unusedTitleAssigned = v2Assigned.title.filter((k) => !isUsedKw(k, usedInTitle));
         v2Assigned.bullets = [...unusedTitleAssigned, ...v2Assigned.bullets];
@@ -258,7 +354,7 @@ export default function ContentCuratorPage() {
 
         setContent({ title: titleText, bullets: [], description: "", searchTerms: "" });
 
-        // Step 2: Bullets
+        // Step 2: Bullets — priorityKeywords = unused-title-assigned (Phase C)
         setPipelineStage("bullets");
         const bulletsRes = await fetch("/content-curator/api/generate-bullets", {
           method: "POST",
@@ -268,6 +364,7 @@ export default function ContentCuratorPage() {
             assignedKeywords: v2Assigned.bullets,
             availablePool: v2Pool,
             bulletCount, imageAnalysis,
+            priorityKeywords: unusedTitleAssigned,
           }),
         });
         const bulletsData = await bulletsRes.json();
@@ -487,13 +584,7 @@ export default function ContentCuratorPage() {
               );
               // Recompute keyword usage — include searchTerms so generic keywords also highlight orange
               const fullText = [live.title, ...live.bullets, live.description, live.searchTerms ?? ""].join(" ");
-              const counts: Record<string, number> = {};
-              for (const kw of allKeywords) {
-                const escaped = kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-                const matches = fullText.match(new RegExp(escaped, "gi"));
-                if (matches?.length) counts[kw.toLowerCase()] = matches.length;
-              }
-              setUsedKeywordCounts(counts);
+              setUsedKeywordCounts(computeKeywordCounts(fullText, allKeywords));
             }}
           />
         </div>
@@ -520,13 +611,7 @@ export default function ContentCuratorPage() {
                 !!(live.title || live.bullets.some((b) => b.trim()) || live.description || live.searchTerms)
               );
               const fullText = [live.title, ...live.bullets, live.description, live.searchTerms ?? ""].join(" ");
-              const counts: Record<string, number> = {};
-              for (const kw of allKeywords) {
-                const escaped = kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-                const matches = fullText.match(new RegExp(escaped, "gi"));
-                if (matches?.length) counts[kw.toLowerCase()] = matches.length;
-              }
-              setUsedKeywordCounts(counts);
+              setUsedKeywordCounts(computeKeywordCounts(fullText, allKeywords));
             }}
           />
         </div>

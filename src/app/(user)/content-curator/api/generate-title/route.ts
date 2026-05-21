@@ -5,14 +5,17 @@
  * Trả về plain string (title text).
  *
  * Body: {
- *   skillContent: string,      — full skill file content (no-split)
- *   assignedKeywords: string[], — keywords user assign cho title
- *   availablePool: string[],  — keywords chưa assign (unassigned pool)
+ *   skillContent: string,        — full skill file content (no-split)
+ *   assignedKeywords: string[],  — keywords user assign cho title
+ *   availablePool: string[],     — keywords chưa assign (unassigned pool)
  *   imageAnalysis?: object,
  *   limits: ContentLimits,
  *   notes?: string,
  *   occasion?: string,
  *   model?: string,
+ *   // Retry mode (when client validates previous title and asks for a rewrite):
+ *   mustIncludeKeywords?: string[],  — keywords missing from previous attempt
+ *   previousAttempt?: string,        — previous title for feedback context
  * }
  */
 
@@ -33,6 +36,8 @@ export async function POST(request: NextRequest) {
       notes,
       occasion,
       model,
+      mustIncludeKeywords,
+      previousAttempt,
     } = body as {
       skillContent?: string;
       assignedKeywords?: string[];
@@ -42,6 +47,8 @@ export async function POST(request: NextRequest) {
       notes?: string;
       occasion?: string;
       model?: string;
+      mustIncludeKeywords?: string[];
+      previousAttempt?: string;
     };
 
     const headers = resolveAiHeaders(request);
@@ -68,6 +75,8 @@ export async function POST(request: NextRequest) {
       limits: effectiveLimits,
       notes,
       occasion,
+      mustIncludeKeywords,
+      previousAttempt,
     });
 
     const raw = await callAI({ prompt, headers, model, responseType: "text", temperature: 0.75 });

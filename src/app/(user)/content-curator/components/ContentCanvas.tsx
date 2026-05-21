@@ -10,7 +10,7 @@ import { useMemo } from "react";
 import { getCuratorHeaders } from "../lib/curator-keys";
 import { getStoredModel } from "./ContentCuratorNav";
 import ColumnCustomizer, { buildDefaultColumns, type Column } from "./ColumnCustomizer";
-import { stripVolume } from "../lib/keywordUtils";
+import { stripVolume, countKeywordOccurrences } from "../lib/keywordUtils";
 
 interface ContentCanvasProps {
   content: ContentListing | null;
@@ -260,14 +260,12 @@ export default function ContentCanvas({ content, isGenerating, onContentChange, 
       bankKeywords.split(/[\n,]+/).map((k) => stripVolume(k)).filter(Boolean)
     ));
 
-    // Tính "đã dùng" CHỈ từ main content — không bao gồm searchTerms
+    // Tính "đã dùng" CHỈ từ main content — không bao gồm searchTerms.
+    // Whole-phrase match — "sticker" KHÔNG match trong "stickers"
     const mainText = [title, ...bullets, description].join(" ");
     const usedInMain = new Set(
       allBankKws
-        .filter((kw) => {
-          const escaped = kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-          return new RegExp(escaped, "i").test(mainText);
-        })
+        .filter((kw) => countKeywordOccurrences(mainText, kw) > 0)
         .map((kw) => kw.toLowerCase())
     );
 

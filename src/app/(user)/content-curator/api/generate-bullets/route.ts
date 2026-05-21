@@ -5,16 +5,17 @@
  * Trả về JSON array of strings.
  *
  * Body: {
- *   skillContent: string,      — full skill file content (no-split)
- *   titleText: string,         — output từ step 1
+ *   skillContent: string,        — full skill file content (no-split)
+ *   titleText: string,           — output từ step 1
  *   assignedKeywords: string[],
- *   availablePool: string[],   — đã update sau step 1
+ *   availablePool: string[],     — đã update sau step 1
  *   bulletCount: number,
  *   imageAnalysis?: object,
  *   limits: ContentLimits,
  *   notes?: string,
  *   occasion?: string,
  *   model?: string,
+ *   priorityKeywords?: string[], — pushed down từ title, ưu tiên ở BULLET #1
  * }
  */
 
@@ -37,6 +38,7 @@ export async function POST(request: NextRequest) {
       notes,
       occasion,
       model,
+      priorityKeywords,
     } = body as {
       skillContent?: string;
       titleText?: string;
@@ -48,6 +50,7 @@ export async function POST(request: NextRequest) {
       notes?: string;
       occasion?: string;
       model?: string;
+      priorityKeywords?: string[];
     };
 
     const headers = resolveAiHeaders(request);
@@ -76,6 +79,7 @@ export async function POST(request: NextRequest) {
       limits: effectiveLimits,
       notes,
       occasion,
+      priorityKeywords,
     });
 
     const raw = await callAI({ prompt, headers, model, responseType: "json", temperature: 0.75 });

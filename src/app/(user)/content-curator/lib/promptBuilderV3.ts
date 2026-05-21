@@ -53,10 +53,14 @@ export interface TitlePromptInput {
   limits: ContentLimits;
   notes?: string;
   occasion?: string;
+  /** Retry mode — keywords the previous attempt failed to include */
+  mustIncludeKeywords?: string[];
+  /** Retry mode — previous title that did not pass validation */
+  previousAttempt?: string;
 }
 
 export function buildTitlePrompt(input: TitlePromptInput): string {
-  const { skillContent, imageAnalysis, assignedKeywords, availablePool, limits, notes, occasion } = input;
+  const { skillContent, imageAnalysis, assignedKeywords, availablePool, limits, notes, occasion, mustIncludeKeywords, previousAttempt } = input;
   const parts: string[] = [];
 
   if (skillContent.trim()) {
@@ -86,6 +90,19 @@ export function buildTitlePrompt(input: TitlePromptInput): string {
   }
   parts.push(kwLines.join("\n"));
 
+  // Retry mode — explicit feedback from previous attempt
+  if (mustIncludeKeywords && mustIncludeKeywords.length > 0) {
+    const retryLines: string[] = ["[RETRY — PREVIOUS ATTEMPT FAILED VALIDATION]"];
+    if (previousAttempt) {
+      retryLines.push(`Previous title: "${previousAttempt}"`);
+    }
+    retryLines.push(
+      `The previous title did not contain at least 3 keywords from the MUST USE list.\n` +
+      `You MUST include AT LEAST these keywords (verbatim, case-insensitive): ${mustIncludeKeywords.join(", ")}`
+    );
+    parts.push(retryLines.join("\n"));
+  }
+
   parts.push(
     `[TASK]\n` +
     `Write the product TITLE only.\n` +
@@ -109,10 +126,15 @@ export interface BulletsPromptInput {
   limits: ContentLimits;
   notes?: string;
   occasion?: string;
+  /**
+   * Keywords pushed down from title (assigned to title but not used).
+   * Should appear in the FIRST bullet whenever possible.
+   */
+  priorityKeywords?: string[];
 }
 
 export function buildBulletsPrompt(input: BulletsPromptInput): string {
-  const { skillContent, imageAnalysis, titleText, assignedKeywords, availablePool, bulletCount, limits, notes, occasion } = input;
+  const { skillContent, imageAnalysis, titleText, assignedKeywords, availablePool, bulletCount, limits, notes, occasion, priorityKeywords } = input;
   const parts: string[] = [];
 
   if (skillContent.trim()) {
@@ -137,6 +159,11 @@ export function buildBulletsPrompt(input: BulletsPromptInput): string {
   }
 
   const kwLines: string[] = ["[KEYWORDS FOR BULLETS]"];
+  if (priorityKeywords && priorityKeywords.length > 0) {
+    kwLines.push(
+      `PRIORITY — pushed down from title, MUST appear in BULLET #1 whenever possible (verbatim, case-insensitive): ${priorityKeywords.join(", ")}`
+    );
+  }
   if (assignedKeywords.length > 0) {
     kwLines.push(`MUST USE (assigned to bullets): ${assignedKeywords.join(", ")}`);
   }
