@@ -93,6 +93,43 @@ export function computeKeywordCounts(text: string, keywords: string[]): Record<s
   return counts;
 }
 
+/** A chunk of text used by highlight renderers — `match: true` means it equals a keyword */
+export interface TextChunk {
+  text: string;
+  match: boolean;
+}
+
+/**
+ * Split text into chunks for highlight rendering.
+ * Keywords are matched as whole phrases (same semantics as `countKeywordOccurrences`).
+ * Multi-keyword alternation — sorted by length DESC so longer phrases win first
+ * (e.g. "vinyl sticker" matches before "sticker").
+ */
+export function chunkByKeywords(text: string, keywords: string[]): TextChunk[] {
+  if (!text) return [];
+  if (!keywords.length) return [{ text, match: false }];
+
+  const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const sorted = [...keywords].sort((a, b) => b.length - a.length);
+  const pattern = sorted.map(escape).join("|");
+  const regex = new RegExp(`(?<=^|\\W)(${pattern})(?=$|\\W)`, "gi");
+
+  const result: TextChunk[] = [];
+  let lastIndex = 0;
+  let m: RegExpExecArray | null;
+  while ((m = regex.exec(text)) !== null) {
+    if (m.index > lastIndex) {
+      result.push({ text: text.slice(lastIndex, m.index), match: false });
+    }
+    result.push({ text: m[1], match: true });
+    lastIndex = m.index + m[1].length;
+  }
+  if (lastIndex < text.length) {
+    result.push({ text: text.slice(lastIndex), match: false });
+  }
+  return result;
+}
+
 /**
  * Pick the most important keywords for the title pool.
  *
