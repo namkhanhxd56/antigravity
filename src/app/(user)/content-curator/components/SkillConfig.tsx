@@ -33,8 +33,6 @@ interface SkillConfigProps {
   onGenerate: () => void;
   isGenerating: boolean;
   canGenerate: boolean;
-  /** Slot cho Dev Inspector — undefined khi production (file bị gitignore) */
-  devPanel?: React.ReactNode;
   /** Called after skill is split — notifies parent of new split state */
   onSkillSplit?: (skillName: string) => void;
   /** Called whenever full skill content is loaded (raw .md string) — for no-split pipeline */
@@ -55,7 +53,6 @@ export default function SkillConfig({
   onGenerate,
   isGenerating,
   canGenerate,
-  devPanel,
   onSkillSplit,
   onSkillContentLoaded,
   showGenerateButton = true,
@@ -298,9 +295,6 @@ export default function SkillConfig({
           )}
         </button>
       )}
-
-      {/* Dev Inspector slot — chỉ có khi file DevInspector.tsx tồn tại (dev only) */}
-      {devPanel}
 
     </div>
   );

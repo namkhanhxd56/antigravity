@@ -2,12 +2,10 @@
 
 import { useState, useMemo } from "react";
 import HighlightTextarea from "./HighlightTextarea";
+import { parseKeywordsWithVolume } from "./KwTag";
+import { chunkByKeywords, buildKeywordRegex } from "../lib/keywordPool";
 
 // ─── Keyword highlight (read-only display) ────────────────────────────────────
-
-function escapeRegExp(s: string) {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
 
 function HighlightText({
   text,
@@ -18,31 +16,7 @@ function HighlightText({
   keywords: string[];
   placeholder?: string;
 }) {
-  const chunks = useMemo(() => {
-    if (!text) return [];
-    if (!keywords.length) return [{ text, match: false }];
-
-    const sorted = [...keywords].sort((a, b) => b.length - a.length);
-    const regex = new RegExp(
-      `(?<=^|\\W)(${sorted.map(escapeRegExp).join("|")})(?=$|\\W)`,
-      "gi"
-    );
-
-    const result: { text: string; match: boolean }[] = [];
-    let lastIndex = 0;
-    let match;
-
-    while ((match = regex.exec(text)) !== null) {
-      if (match.index > lastIndex)
-        result.push({ text: text.slice(lastIndex, match.index), match: false });
-      result.push({ text: match[1], match: true });
-      lastIndex = match.index + match[1].length;
-    }
-    if (lastIndex < text.length)
-      result.push({ text: text.slice(lastIndex), match: false });
-
-    return result;
-  }, [text, keywords]);
+  const chunks = useMemo(() => chunkByKeywords(text, keywords), [text, keywords]);
 
   if (!text) {
     return (
@@ -75,27 +49,13 @@ interface CompareViewProps {
   bankKeywords: string;
 }
 
-// ─── Strip volume suffix from keyword lines ───────────────────────────────────
-
-function stripVolume(line: string): string {
-  return line.replace(/\s+(\d+|-)\s*$/, "").trim();
-}
-
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function CompareView({ myTitle, onMyTitleChange, bankKeywords }: CompareViewProps) {
   const [competitors, setCompetitors] = useState<string[]>([""]);
 
   const keywordsList = useMemo(
-    () =>
-      Array.from(
-        new Set(
-          bankKeywords
-            .split(/[\n,]+/)
-            .map((k) => stripVolume(k))
-            .filter(Boolean)
-        )
-      ),
+    () => parseKeywordsWithVolume(bankKeywords).map((p) => p.kw),
     [bankKeywords]
   );
 
@@ -208,13 +168,7 @@ export default function CompareView({ myTitle, onMyTitleChange, bankKeywords }: 
 
 function KeywordCoverage({ text, keywords }: { text: string; keywords: string[] }) {
   const { used, total } = useMemo(() => {
-    const lower = text.toLowerCase();
-    const used = keywords.filter((kw) => {
-      const regex = new RegExp(
-        `(?<=^|\\W)${escapeRegExp(kw.toLowerCase())}(?=$|\\W)`
-      );
-      return regex.test(lower);
-    }).length;
+    const used = keywords.filter((kw) => buildKeywordRegex(kw, "i").test(text)).length;
     return { used, total: keywords.length };
   }, [text, keywords]);
 

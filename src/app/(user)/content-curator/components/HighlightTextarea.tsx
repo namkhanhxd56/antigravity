@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useRef } from "react";
+import { chunkByKeywords } from "../lib/keywordPool";
 
 interface HighlightTextareaProps {
   value: string;
@@ -11,10 +12,6 @@ interface HighlightTextareaProps {
   textClassName?: string;
   paddingClassName?: string;
   minHeight?: string;
-}
-
-function escapeRegExp(string: string) {
-  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 export default function HighlightTextarea({
@@ -35,39 +32,7 @@ export default function HighlightTextarea({
     }
   };
 
-  // Build chunks for highlighting (only finding whole-word matches)
-  const chunks = useMemo(() => {
-    if (!value) return [];
-    if (!keywords || keywords.length === 0) return [{ text: value, match: false }];
-
-    // Sort by length descending to match longest possible keyword first
-    const sortedKeywords = [...keywords].sort((a, b) => b.length - a.length);
-    const pattern = sortedKeywords.map(escapeRegExp).join('|');
-    const regex = new RegExp(`(?<=^|\\W)(${pattern})(?=$|\\W)`, 'gi');
-
-    const result = [];
-    let lastIndex = 0;
-    let match;
-
-    while ((match = regex.exec(value)) !== null) {
-      const matchStart = match.index;
-      // Depending on browsers, regex.exec might include empty strings if not careful.
-      const matchText = match[1];
-
-      if (matchStart > lastIndex) {
-        result.push({ text: value.substring(lastIndex, matchStart), match: false });
-      }
-
-      result.push({ text: matchText, match: true });
-      lastIndex = matchStart + matchText.length;
-    }
-
-    if (lastIndex < value.length) {
-      result.push({ text: value.substring(lastIndex), match: false });
-    }
-
-    return result;
-  }, [value, keywords]);
+  const chunks = useMemo(() => chunkByKeywords(value, keywords), [value, keywords]);
 
   return (
     <div className={`relative w-full overflow-hidden ${className}`} style={{ minHeight }}>

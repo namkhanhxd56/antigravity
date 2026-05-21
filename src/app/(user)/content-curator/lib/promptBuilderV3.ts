@@ -5,15 +5,7 @@
  */
 
 import type { ContentLimits } from "./useContentLimits";
-
-export interface ImageAnalysis {
-  sticker_count?: number;
-  niche?: string;
-  theme?: string;
-  text_on_stickers?: string[];
-  surfaces?: string[];
-  raw?: string;
-}
+import type { ImageAnalysis } from "./types";
 
 function formatImageAnalysis(analysis: ImageAnalysis | null): string {
   if (!analysis) return "";

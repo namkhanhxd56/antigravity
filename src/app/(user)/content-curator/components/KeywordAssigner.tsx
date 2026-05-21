@@ -1,14 +1,8 @@
 "use client";
 
-import { useMemo, useState, useRef, useCallback } from "react";
-import type { PipelineVersion } from "../lib/types";
-import { KwTag, parseKeywordsWithVolume, formatVolume } from "./KwTag";
-
-export interface KeywordAssignments {
-  title: string[];
-  bullets: string[];
-  description: string[];
-}
+import { useMemo, useState, useRef } from "react";
+import type { PipelineVersion, KeywordAssignments } from "../lib/types";
+import { KwTag, parseKeywordsWithVolume } from "./KwTag";
 
 interface KeywordAssignerProps {
   keywords: string;
@@ -175,13 +169,12 @@ export default function KeywordAssigner({
   }, [parsedKeywords]);
 
   const dragRef = useRef<string | null>(null);
-  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
 
   const assignedSet = useMemo(
     () => new Set([...assignments.title, ...assignments.bullets, ...assignments.description]),
     [assignments]
   );
-  const unassigned = allKeywords.filter((kw) => !assignedSet.has(kw) && !dismissed.has(kw.toLowerCase()));
+  const unassigned = allKeywords.filter((kw) => !assignedSet.has(kw));
 
   const handleDragStart = (kw: string) => { dragRef.current = kw; };
 
@@ -199,10 +192,6 @@ export default function KeywordAssigner({
     const trimmed = kw.trim();
     if (!trimmed) return;
     onAssignmentsChange(moveKeyword(trimmed, zone, assignments));
-  };
-
-  const handleDismiss = (kw: string) => {
-    setDismissed((prev) => new Set([...prev, kw.toLowerCase()]));
   };
 
   const [overPool, setOverPool] = useState(false);

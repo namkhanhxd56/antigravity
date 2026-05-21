@@ -4,17 +4,14 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import type { ContentListing, RewriteRequest } from "../lib/types";
 import { useContentLimits } from "../lib/useContentLimits";
 import { useUndoRedo } from "../lib/useUndoRedo";
+import { buildKeywordRegex } from "../lib/keywordPool";
 import TextToolbar from "./TextToolbar";
 import HighlightTextarea from "./HighlightTextarea";
 import { useMemo } from "react";
 import { getCuratorHeaders } from "../lib/curator-keys";
 import { getStoredModel } from "./ContentCuratorNav";
 import ColumnCustomizer, { buildDefaultColumns, type Column } from "./ColumnCustomizer";
-
-/** Strip trailing volume number or "-" from a keyword line */
-function stripVolume(line: string): string {
-  return line.replace(/\s+(\d+|-)\s*$/, "").trim();
-}
+import { parseKeywordsWithVolume } from "./KwTag";
 
 interface ContentCanvasProps {
   content: ContentListing | null;
@@ -260,18 +257,14 @@ export default function ContentCanvas({ content, isGenerating, onContentChange, 
   // Reload: fill generic keywords — chỉ dùng title+bullets+description để tìm kw chưa dùng
   // (không dùng searchTerms để tránh kết quả thay đổi sau mỗi lần bấm)
   const handleReloadSearchTerms = useCallback(() => {
-    const allBankKws = Array.from(new Set(
-      bankKeywords.split(/[\n,]+/).map((k) => stripVolume(k)).filter(Boolean)
-    ));
+    const allBankKws = parseKeywordsWithVolume(bankKeywords).map((p) => p.kw);
 
     // Tính "đã dùng" CHỈ từ main content — không bao gồm searchTerms
+    // Dùng buildKeywordRegex (whole-word match) để khớp với scanUsed / pipeline.
     const mainText = [title, ...bullets, description].join(" ");
     const usedInMain = new Set(
       allBankKws
-        .filter((kw) => {
-          const escaped = kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-          return new RegExp(escaped, "i").test(mainText);
-        })
+        .filter((kw) => buildKeywordRegex(kw, "i").test(mainText))
         .map((kw) => kw.toLowerCase())
     );
 
@@ -385,12 +378,10 @@ export default function ContentCanvas({ content, isGenerating, onContentChange, 
     }
   }, [limits, updateTitle, updateDescription]);
 
-  const keywordsList = useMemo(() => Array.from(new Set(
-    bankKeywords
-      .split(/[\n,]+/)
-      .map((k) => stripVolume(k))
-      .filter(Boolean)
-  )), [bankKeywords]);
+  const keywordsList = useMemo(
+    () => parseKeywordsWithVolume(bankKeywords).map((p) => p.kw),
+    [bankKeywords]
+  );
 
   return (
     <div className="flex flex-col p-6 md:p-8">

@@ -9,9 +9,17 @@ export interface ParsedKeyword {
   volume: number | null;
 }
 
-/** Parse raw keyword lines, extracting keyword string + optional volume */
+/**
+ * Parse raw keyword lines, extracting keyword string + optional volume.
+ *
+ * Splits on NEWLINE only (not comma) — vì format từ Helium10 / Cerebro
+ * thường có volume kiểu "12,000" với comma làm thousand-separator.
+ * Mỗi keyword nên ở 1 dòng riêng.
+ *
+ * Volume format chấp nhận: "12000", "12,000", "1,500,000", hoặc "-" (no data).
+ */
 export function parseKeywordsWithVolume(raw: string): ParsedKeyword[] {
-  const lines = raw.split(/[\n,]+/).map((l) => l.trim()).filter(Boolean);
+  const lines = raw.split(/\n+/).map((l) => l.trim()).filter(Boolean);
   const seen = new Set<string>();
   const result: ParsedKeyword[] = [];
   for (const line of lines) {

@@ -6,37 +6,18 @@ import SkillConfig from "./components/SkillConfig";
 import ContentCanvas from "./components/ContentCanvas";
 import CompareView from "./components/CompareView";
 import CompetitorView, { type CompetitorInput } from "./components/CompetitorView";
-import KeywordAssigner, { type KeywordAssignments } from "./components/KeywordAssigner";
+import KeywordAssigner from "./components/KeywordAssigner";
 import KeywordCoverage from "./components/KeywordCoverage";
+import { parseKeywordsWithVolume } from "./components/KwTag";
 import { getCuratorHeaders } from "./lib/curator-keys";
 import { getStoredModel } from "./components/ContentCuratorNav";
-import { initPool, scanUsed, consumeStep, getRemainingKeywords } from "./lib/keywordPool";
+import { initPool, scanUsed, consumeStep, getRemainingKeywords, buildKeywordRegex } from "./lib/keywordPool";
 import { loadSplitFromStorage } from "./lib/skillSplitter";
 import { useContentLimits } from "./lib/useContentLimits";
-import type { ContentListing, ImageAnalysis, PipelineStage, PipelineVersion, KeywordAssignments as KWAssignments } from "./lib/types";
+import type { ContentListing, ImageAnalysis, PipelineStage, PipelineVersion, KeywordAssignments } from "./lib/types";
 import { useCuratorMode } from "./lib/ModeContext";
 
-// ─── DEV ONLY ─────────────────────────────────────────────────────────────────
-// import DevInspector from "./components/DevInspector";
-// const DEV_INSPECTOR = true;
-// ─────────────────────────────────────────────────────────────────────────────
-
-const EMPTY_ASSIGNMENTS: KWAssignments = { title: [], bullets: [], description: [] };
-
-/** Parse raw keyword textarea → deduplicated array (strips volume suffix) */
-function parseKeywordsToArray(raw: string): string[] {
-  const lines = raw.split(/[\n,]+/).map((l) => l.trim()).filter(Boolean);
-  const seen = new Set<string>();
-  const result: string[] = [];
-  for (const line of lines) {
-    const kw = line.replace(/\s+(\d+|-)\s*$/, "").trim();
-    if (kw && !seen.has(kw.toLowerCase())) {
-      seen.add(kw.toLowerCase());
-      result.push(kw);
-    }
-  }
-  return result;
-}
+const EMPTY_ASSIGNMENTS: KeywordAssignments = { title: [], bullets: [], description: [] };
 
 export default function ContentCuratorPage() {
   // ─── Input state ────────────────────────────────────────────────────────────
@@ -49,7 +30,7 @@ export default function ContentCuratorPage() {
   const [notes, setNotes] = useState("");
 
   // ─── V3: Keyword assignments + bullet count ──────────────────────────────
-  const [assignments, setAssignments] = useState<KWAssignments>(EMPTY_ASSIGNMENTS);
+  const [assignments, setAssignments] = useState<KeywordAssignments>(EMPTY_ASSIGNMENTS);
   const [bulletCount, setBulletCount] = useState(5);
 
   // ─── Pipeline version ────────────────────────────────────────────────────────
@@ -78,7 +59,7 @@ export default function ContentCuratorPage() {
   const { limits } = useContentLimits();
   const { mode } = useCuratorMode();
 
-  const allKeywords = useMemo(() => parseKeywordsToArray(keywords), [keywords]);
+  const allKeywords = useMemo(() => parseKeywordsWithVolume(keywords).map((p) => p.kw), [keywords]);
   const canGenerate = allKeywords.length > 0;
 
   // Sync assignments: remove keywords that no longer exist in the bank
@@ -113,18 +94,15 @@ export default function ContentCuratorPage() {
   }, []);
 
   // ─── Shared: compute per-keyword counts from full generated text ────────────
+  // Dùng buildKeywordRegex (whole-word match) để khớp với scanUsed / pipeline pool.
   const computeCounts = useCallback((fullText: string) => {
     const counts: Record<string, number> = {};
     for (const kw of allKeywords) {
-      const escaped = kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      const matches = fullText.match(new RegExp(escaped, "gi"));
+      const matches = fullText.match(buildKeywordRegex(kw, "gi"));
       if (matches && matches.length > 0) counts[kw.toLowerCase()] = matches.length;
     }
     return counts;
   }, [allKeywords]);
-
-  // ─── V1 Pipeline (Sequential, zone-locked pool) ───────────────────────────────
-  // ─── V2 Pipeline (Sequential, cascade push-down) ─────────────────────────────
 
   const handleGenerate = useCallback(async () => {
     if (!canGenerate) return;
@@ -169,7 +147,7 @@ export default function ContentCuratorPage() {
 
       if (pipelineVersion === "v1") {
         // ── V1: Zone-locked sequential pool ─────────────────────────────────
-        let pool = initPool(keywords, assignments);
+        let pool = initPool(allKeywords, assignments);
 
         // Step 1: Title
         setPipelineStage("title");
@@ -449,8 +427,6 @@ export default function ContentCuratorPage() {
             {error}
           </div>
         )}
-
-        {/* Remaining Keywords hidden — highlights shown in Keyword Assigner */}
       </div>
 
       {/* ── Col 2: Keyword Assigner / Competitor Form ────────────────────── */}
@@ -461,7 +437,7 @@ export default function ContentCuratorPage() {
             isGenerating={isGeneratingCompetitor}
             hasContent={hasCompetitorContent}
             onClearContent={() => {
-              setCompetitorContent({ title: "", bullets: ["", "", "", "", ""], description: "", searchTerms: "" });
+              setCompetitorContent({ title: "", bullets: Array(bulletCount).fill(""), description: "", searchTerms: "" });
               setHasCompetitorContent(false);
             }}
             keywords={keywords}
@@ -471,7 +447,7 @@ export default function ContentCuratorPage() {
         ) : (
         <KeywordAssigner
           keywords={keywords}
-          assignments={assignments as KeywordAssignments}
+          assignments={assignments}
           onAssignmentsChange={setAssignments}
           bulletCount={bulletCount}
           onBulletCountChange={setBulletCount}
@@ -483,7 +459,7 @@ export default function ContentCuratorPage() {
           onVersionChange={setPipelineVersion}
           hasContent={hasCanvasContent}
           onClearContent={() => {
-            setContent({ title: "", bullets: ["", "", "", "", ""], description: "", searchTerms: "" });
+            setContent({ title: "", bullets: Array(bulletCount).fill(""), description: "", searchTerms: "" });
             setLiveTitle("");
             setHasCanvasContent(false);
           }}
@@ -511,13 +487,7 @@ export default function ContentCuratorPage() {
               );
               // Recompute keyword usage — include searchTerms so generic keywords also highlight orange
               const fullText = [live.title, ...live.bullets, live.description, live.searchTerms ?? ""].join(" ");
-              const counts: Record<string, number> = {};
-              for (const kw of allKeywords) {
-                const escaped = kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-                const matches = fullText.match(new RegExp(escaped, "gi"));
-                if (matches?.length) counts[kw.toLowerCase()] = matches.length;
-              }
-              setUsedKeywordCounts(counts);
+              setUsedKeywordCounts(computeCounts(fullText));
             }}
           />
         </div>
@@ -537,20 +507,14 @@ export default function ContentCuratorPage() {
             skillName={selectedSkill}
             remainingKeywords={[]}
             usedKeywordCounts={usedKeywordCounts}
-            searchTermAppendTrigger={mode === "competitor" ? competitorAppendTrigger : null}
+            searchTermAppendTrigger={competitorAppendTrigger}
             onContentChange={(live) => {
               if (mode !== "competitor") return;
               setHasCompetitorContent(
                 !!(live.title || live.bullets.some((b) => b.trim()) || live.description || live.searchTerms)
               );
               const fullText = [live.title, ...live.bullets, live.description, live.searchTerms ?? ""].join(" ");
-              const counts: Record<string, number> = {};
-              for (const kw of allKeywords) {
-                const escaped = kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-                const matches = fullText.match(new RegExp(escaped, "gi"));
-                if (matches?.length) counts[kw.toLowerCase()] = matches.length;
-              }
-              setUsedKeywordCounts(counts);
+              setUsedKeywordCounts(computeCounts(fullText));
             }}
           />
         </div>

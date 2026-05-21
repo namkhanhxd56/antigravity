@@ -20,7 +20,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { callAI, resolveAiHeaders } from "../../lib/aiCall";
-import { buildBulletsPrompt, type ImageAnalysis } from "../../lib/promptBuilderV3";
+import { buildBulletsPrompt } from "../../lib/promptBuilderV3";
+import type { ImageAnalysis } from "../../lib/types";
 import type { ContentLimits } from "../../lib/useContentLimits";
 
 export async function POST(request: NextRequest) {

@@ -20,8 +20,6 @@ export function getStoredModel(): GeminiModel {
   return (getCuratorModel() as GeminiModel) || "gemini-2.0-flash";
 }
 
-export const DEFAULT_MODEL = "gemini-2.0-flash";
-
 export default function ContentCuratorNav() {
   const { mode, setMode } = useCuratorMode();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
