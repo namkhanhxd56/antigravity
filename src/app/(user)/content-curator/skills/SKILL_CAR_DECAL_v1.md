@@ -1,13 +1,14 @@
 ---
 name: skill-car-decal
-description: "Product skill for writing Amazon US listings for car decals & car stickers (vinyl decals for car window, windshield, bumper, truck, SUV, RV, motorcycle, helmet, boat, laptop, tumbler, etc). Use this skill when the user wants to create Amazon listing content (title, bullet points, description) for car decal / car sticker / bumper sticker / window decal / vinyl car decal products. Triggers: any mention of 'car decal listing', 'car sticker listing', 'bumper sticker', 'window decal', 'viết listing car decal', 'amazon car decal content', product images of decal designs for vehicles, or requests to generate title/bullets/description for car decal products. This skill includes image analysis to auto-detect decal count, theme, size, and niche from uploaded product images."
+description: "Product skill for writing Amazon US listings for car decals & car stickers (vinyl decals for car window, windshield, bumper, truck, SUV, RV, motorcycle, helmet, boat, laptop, tumbler, etc). Use this skill when the user wants to create Amazon listing content (title, bullet points, description) for car decal / car sticker / bumper sticker / window decal / vinyl car decal products. Triggers: any mention of 'car decal listing', 'car sticker listing', 'bumper sticker', 'window decal', 'viết listing car decal', 'amazon car decal content', product images of decal designs for vehicles, or requests to generate title/bullets/description for car decal products. Default quantity is 1 (no quantity or size in title unless user specifies in note). This skill includes image analysis to auto-detect theme, design, text, and niche from uploaded product images."
 ---
 
 # SKILL: CAR DECAL (Vinyl Car Sticker / Bumper Sticker / Window Decal)
 
-> **Version:** 1.0
+> **Version:** 1.1
 > **Based on:** Top winning Amazon US car decal listings analysis
 > **Applies to:** Vinyl decals for car window, windshield, bumper, truck, SUV, RV, motorcycle, helmet, boat, laptop, tumbler, water bottle...
+> **Changelog v1.1:** Bỏ số lượng và kích thước khỏi title mặc định — chỉ thêm khi user yêu cầu trong note.
 
 ---
 
@@ -15,7 +16,7 @@ Skill này áp dụng **Base Rules** (lưu trong memory): keyword quan trọng n
 
 **Keyword flow:** Title → Bullet Points → Description
 
-> ⚠️ **Khác biệt cốt lõi so với sticker đa năng:** Car decal có vị trí dán chính là PHƯƠNG TIỆN (car/truck/SUV/window/bumper) chứ không phải laptop/water bottle. Số lượng phổ biến 1–2 Pcs, kích thước lớn 5–8 inches, và nhấn mạnh độ bền ngoài trời (UV, weatherproof, outdoor-grade, no residue on car paint).
+> ⚠️ **Khác biệt cốt lõi so với sticker đa năng:** Car decal có vị trí dán chính là PHƯƠNG TIỆN (car/truck/SUV/window/bumper) chứ không phải laptop/water bottle. **Mặc định bán 1 chiếc — KHÔNG đưa số lượng và kích thước vào title** (nếu user có note riêng yêu cầu thì thêm theo note). Tập trung nhấn mạnh độ bền ngoài trời (UV, weatherproof, outdoor-grade, automotive-grade, no residue on car paint).
 
 ---
 
@@ -25,28 +26,16 @@ Khi người dùng upload hình ảnh sản phẩm, PHẢI phân tích trước 
 
 ### Các bước phân tích
 
-**1. Đếm số lượng decal**
-- Đếm số design riêng biệt → dùng làm `(X Pcs)` trong title
-- Car decal phổ biến: 1 Pcs (single piece) hoặc 2 Pcs (pair / left-right)
-- Nếu set nhiều: 3-4 Pcs
-- Nếu không rõ → để decal_count = null
-
-**2. Ước lượng kích thước**
-- Đo tỉ lệ decal so với bề mặt mẫu (nếu có)
-- Kích thước phổ biến: 4", 5", 6", 8" (lớn hơn sticker thường)
-- Bumper sticker / windshield: thường 6–8 inches
-- Window cling nhỏ: 3–5 inches
-
-**3. Xác định chủ đề / theme**
+**1. Xác định chủ đề / theme**
 - Nhận diện nội dung chính: nhân vật, biểu tượng, text/quote, phong cách minh họa
 - Xác định tone: faith/religious, patriotic, funny, awareness, memorial, cute animal, sport
 - Ghi nhận chi tiết thiết kế: màu sắc chủ đạo (white/black/full-color), kiểu cut (die-cut/kiss-cut), có background hay transparent
 
-**4. Đọc text trên decal**
+**2. Đọc text trên decal**
 - Đọc và ghi lại chính xác mọi text/quote
 - Text này sẽ dùng trong BP1 và Description
 
-**5. Xác định niche**
+**3. Xác định niche**
 
 | Dấu hiệu nhận diện | Niche |
 |---------------------|-------|
@@ -63,14 +52,14 @@ Khi người dùng upload hình ảnh sản phẩm, PHẢI phân tích trước 
 
 Trình bày kết quả trước khi viết listing:
 ```
-📦 Số lượng: X Pcs
-📏 Kích thước ước lượng: X inches
 🎨 Chủ đề: [mô tả ngắn]
 🏷️ Niche: [Faith/Patriotic/Pet/Awareness/Funny/Memorial/Sport/Auto Style]
 📝 Text trên decal: ["quote 1", "quote 2", ...]
 🎯 Chi tiết thiết kế: [màu, die-cut/kiss-cut, transparent/background, style minh họa]
 🚗 Vị trí dán đề xuất chính: [window/bumper/windshield/hood/tailgate]
 ```
+
+> 📌 **Lưu ý về số lượng & kích thước:** Mặc định 1 chiếc, KHÔNG đưa vào title. Chỉ thêm khi user ghi rõ trong note (ví dụ note ghi "2 Pcs" hoặc "6 inches" → đưa vào title theo format chuẩn).
 
 ---
 
@@ -81,8 +70,10 @@ Trình bày kết quả trước khi viết listing:
 ### Công thức chuẩn
 
 ```
-(Số lượng) + [Keyword Root] + [Long-tail Keyword] - Tính chất nổi bật + Chất liệu + Danh sách bề mặt (xe trước, đồ khác sau) + [Keyword Broad] + Kích thước
+[Keyword Root] + [Long-tail Keyword] - Tính chất nổi bật + Chất liệu + Danh sách bề mặt (xe trước, đồ khác sau) + [Keyword Broad]
 ```
+
+> 📌 **Số lượng & kích thước:** KHÔNG đưa vào title mặc định. Chỉ thêm khi user yêu cầu trong note. Nếu cần, thêm `(X Pcs)` ngay đầu title và kích thước ở cuối (ví dụ `- 6 Inches` hoặc `- 8" x 3"`).
 
 ### 3 loại keyword trong title
 
@@ -96,16 +87,18 @@ Trình bày kết quả trước khi viết listing:
 
 | Vị trí | Thành phần | Tần suất | Ví dụ |
 |--------|-----------|---------|-------|
-| 1 | Số lượng `(XPcs)` — lấy từ ảnh | 60% | `(2Pcs)`, `(2 Pcs)` |
-| 2 | **Keyword Root** (niche + car decal/sticker) | 100% | `Faith Christian Car Decal` |
-| 3 | **Long-tail Keyword** | Nên có | `Faith Can Move Mountains Vinyl Sticker` |
-| 4 | Dấu `-` hoặc `\|` phân tách | — | — |
-| 5 | Tính chất nổi bật | 80% | `Waterproof`, `UV-Resistant`, `Weatherproof`, `Die-Cut` |
-| 6 | Chất liệu "Vinyl Decal" / "Premium Vinyl" | 90% | `Vinyl Decal`, `Premium Vinyl Sticker` |
-| 7 | **Danh sách bề mặt** (XE trước, đồ khác sau) | 100% | `for Car, Truck, Window, Bumper, Laptop` |
-| 8 | **Keyword Broad** (nếu còn dư) | Tùy chọn | `Car Accessories`, `Bumper Stickers` |
-| 9 | Kích thước | 70% | `6 Inches`, `8" x 3"`, `5 Inch` |
-| 10 | Màu sắc (nếu có biến thể) | 30% | `(White)`, `\| Black` |
+| 1 | **Keyword Root** (niche + car decal/sticker) | 100% | `Faith Christian Car Decal` |
+| 2 | **Long-tail Keyword** | Nên có | `Faith Can Move Mountains Vinyl Sticker` |
+| 3 | Dấu `-` hoặc `\|` phân tách | — | — |
+| 4 | Tính chất nổi bật | 80% | `Waterproof`, `UV-Resistant`, `Weatherproof`, `Die-Cut` |
+| 5 | Chất liệu "Vinyl Decal" / "Premium Vinyl" | 90% | `Vinyl Decal`, `Premium Vinyl Sticker` |
+| 6 | **Danh sách bề mặt** (XE trước, đồ khác sau) | 100% | `for Car, Truck, Window, Bumper, Laptop` |
+| 7 | **Keyword Broad** (nếu còn dư) | Tùy chọn | `Car Accessories`, `Bumper Stickers` |
+| 8 | Màu sắc (nếu có biến thể) | 30% | `(White)`, `\| Black` |
+
+> ⚙️ **Bổ sung khi có note từ user:**
+> - Note ghi số lượng (vd "2 Pcs", "3 Pcs") → thêm `(2 Pcs)` ở vị trí #1 (đầu title)
+> - Note ghi kích thước (vd "6 inches", "8x3 inch") → thêm `- 6 Inches` ở cuối title (trước màu sắc nếu có)
 
 ### Bề mặt phổ biến trong Title (CAR DECAL khác sticker thường)
 
@@ -127,27 +120,27 @@ Trình bày kết quả trước khi viết listing:
 
 **Faith/Christian:**
 ```
-(2Pcs) Faith Christian Car Decal - Faith Can Move Mountains Jesus Cross Vinyl Sticker Waterproof for Car, Truck, Window, Bumper, Laptop - Christian Car Accessories - 8 Inches
+Faith Christian Car Decal - Faith Can Move Mountains Jesus Cross Vinyl Sticker Waterproof for Car, Truck, Window, Bumper, Laptop - Christian Car Accessories
 ```
 
 **Patriotic:**
 ```
-Stand for The Flag Kneel for The Cross Car Decal - Patriotic Vinyl Sticker Waterproof UV-Resistant for Car, Truck, Bumper, Window, Laptop - American Flag Bumper Stickers - 5 Inches
+Stand for The Flag Kneel for The Cross Car Decal - Patriotic Vinyl Sticker Waterproof UV-Resistant for Car, Truck, Bumper, Window, Laptop - American Flag Bumper Stickers
 ```
 
 **Pet/Cute Animal:**
 ```
-(2 Pcs) Cute Cat Car Decals - Cat Windshield Wiper Vinyl Sticker Waterproof Die-Cut for Car Window, Bumper, Truck, Laptop - Funny Car Accessories for Cat Lovers - 6 Inches
+Cute Cat Car Decal - Cat Windshield Wiper Vinyl Sticker Waterproof Die-Cut for Car Window, Bumper, Truck, Laptop - Funny Car Accessories for Cat Lovers
 ```
 
 **Awareness/Family Safety:**
 ```
-(2Pcs) Autism Awareness Car Decal - Autistic Child On Board Vinyl Sticker Waterproof for Car, Truck, Bumper, Window, SUV - Autism Car Accessories - 4 Inches
+Autism Awareness Car Decal - Autistic Child On Board Vinyl Sticker Waterproof for Car, Truck, Bumper, Window, SUV - Autism Car Accessories
 ```
 
 **Memorial/Tribute:**
 ```
-In Loving Memory Car Decal - Angel Wings Memorial Vinyl Sticker Waterproof Custom Tribute for Car, Truck, Window, Bumper, Laptop - Memorial Car Accessories - 6 Inches
+In Loving Memory Car Decal - Angel Wings Memorial Vinyl Sticker Waterproof Custom Tribute for Car, Truck, Window, Bumper, Laptop - Memorial Car Accessories
 ```
 
 ---
@@ -282,8 +275,9 @@ A thoughtful Christian gift for dad, mom, husband, wife, friends, pastors, and c
 
 ## CHECKLIST TRƯỚC KHI XUẤT LISTING
 
-- [ ] Đã phân tích ảnh: số lượng, kích thước, theme, niche, text trên decal
-- [ ] Title ≤ 200 ký tự, có Keyword Root đứng đầu
+- [ ] Đã phân tích ảnh: theme, niche, text trên decal, chi tiết thiết kế
+- [ ] Title ≤ 200 ký tự, **bắt đầu bằng Keyword Root** (KHÔNG có số lượng/kích thước trừ khi user note)
+- [ ] Đã kiểm tra note của user: nếu có yêu cầu số lượng/kích thước → thêm đúng format
 - [ ] Title chứa ít nhất 3 bề mặt xe (Car + Truck/Window/Bumper/...)
 - [ ] Mỗi keyword chỉ xuất hiện 1 lần trong toàn listing
 - [ ] 5 Bullets đầy đủ: Design → Audience → Surface+Quality → Application → Gift
